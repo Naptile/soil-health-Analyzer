@@ -10,13 +10,14 @@ import {
   Menu,
   X,
   Home,
+  MessageSquare,
 } from "lucide-react";
 
 export default function Navbar({ isAuthenticated, user, onLogout, onLoginClick }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
-  // Add Dashboard only if authenticated
+  // Navigation items
   const navItems = [
     { name: "Soil Analyzer", path: "/", icon: Leaf },
     { name: "Weather Forecast", path: "/weather", icon: Cloud },
@@ -25,10 +26,11 @@ export default function Navbar({ isAuthenticated, user, onLogout, onLoginClick }
     { name: "Contact", path: "/contact", icon: Phone },
   ];
 
-  if (isAuthenticated) {
-    navItems.push({ name: "Dashboard", path: "/dashboard", icon: Home });
-    navItems.push({ name: "Profile", path: "/profile", icon: User });
-  }
+  // Authenticated users see Dashboard
+  if (isAuthenticated) navItems.push({ name: "Dashboard", path: "/dashboard", icon: Home });
+
+  // Admin users see Admin Messages
+  if (user?.role === "admin") navItems.push({ name: "Admin Messages", path: "/admin/messages", icon: MessageSquare });
 
   return (
     <nav className="relative z-20 backdrop-blur-lg bg-white/70 border-b border-emerald-200 shadow-lg">
@@ -42,7 +44,7 @@ export default function Navbar({ isAuthenticated, user, onLogout, onLoginClick }
             </span>
           </Link>
 
-          {/* Desktop Nav */}
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -96,7 +98,7 @@ export default function Navbar({ isAuthenticated, user, onLogout, onLoginClick }
           </button>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Navigation */}
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-emerald-200">
             {navItems.map((item) => {

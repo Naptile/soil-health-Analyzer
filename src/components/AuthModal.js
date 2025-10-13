@@ -1,152 +1,144 @@
 import React, { useState } from "react";
-import { X, User, Mail, Lock } from "lucide-react";
+import { X } from "lucide-react";
 
-export default function AuthModal({ isOpen, onClose, onLogin }) {
-  const [isRegister, setIsRegister] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
+export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  // --- Handle Login ---
+  const handleLogin = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
 
-    // Mock login/register handler
-    const user = {
-      name: formData.name || "John Doe",
-      email: formData.email,
-      joinDate: "Oct 2025",
-      location: "Kenya",
-      stats: { soilScans: 12, weatherChecks: 8, resourcesRead: 5 },
-      recentScans: [
-        { location: "Nairobi", date: "Oct 10, 2025", type: "Loamy", score: 82 },
-        { location: "Kisumu", date: "Oct 8, 2025", type: "Clay", score: 65 },
-      ],
-    };
+    try {
+      const res = await fetch("http://localhost:5000/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
 
-    onLogin(user);
-    onClose();
+      if (res.ok) {
+        onLogin(data.user);
+      } else {
+        setError(data.error || "Login failed");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Server error. Try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- Handle Registration ---
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("http://localhost:5000/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Registration successful! Please log in.");
+        setMode("login");
+        setName("");
+        setEmail("");
+        setPassword("");
+      } else {
+        setError(data.error || "Registration failed");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Server error. Try again later.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50">
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 animate-fade-in">
-        {/* Close Button */}
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Header */}
-        <h2 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
-          {isRegister ? "Create Account" : "Welcome Back"}
+        <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">
+          {mode === "login" ? "Login" : "Register"}
         </h2>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {isRegister && (
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Full Name</label>
-              <div className="flex items-center bg-gray-50 rounded-xl px-3 border border-gray-200 focus-within:border-emerald-400">
-                <User className="w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="John Doe"
-                  className="w-full bg-transparent px-2 py-3 focus:outline-none text-gray-700"
-                />
-              </div>
-            </div>
+        {error && <p className="text-red-500 mb-2 text-center">{error}</p>}
+
+        <form onSubmit={mode === "login" ? handleLogin : handleRegister} className="space-y-4">
+          {mode === "register" && (
+            <input
+              type="text"
+              placeholder="Your Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              required
+            />
           )}
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Email</label>
-            <div className="flex items-center bg-gray-50 rounded-xl px-3 border border-gray-200 focus-within:border-emerald-400">
-              <Mail className="w-4 h-4 text-gray-400" />
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="john@example.com"
-                className="w-full bg-transparent px-2 py-3 focus:outline-none text-gray-700"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Password</label>
-            <div className="flex items-center bg-gray-50 rounded-xl px-3 border border-gray-200 focus-within:border-emerald-400">
-              <Lock className="w-4 h-4 text-gray-400" />
-              <input
-                type="password"
-                required
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="••••••••"
-                className="w-full bg-transparent px-2 py-3 focus:outline-none text-gray-700"
-              />
-            </div>
-          </div>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            required
+          />
 
           <button
             type="submit"
-            className="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+            disabled={loading}
+            className="w-full bg-emerald-500 text-white px-5 py-3 rounded-xl font-medium hover:bg-emerald-600 transition-all"
           >
-            {isRegister ? "Sign Up" : "Login"}
+            {loading ? (mode === "login" ? "Logging in..." : "Registering...") : mode === "login" ? "Login" : "Register"}
           </button>
         </form>
 
-        {/* Toggle between Login/Register */}
-        <div className="text-center mt-6 text-sm text-gray-600">
-          {isRegister ? (
+        <p className="text-sm text-gray-500 mt-4 text-center">
+          {mode === "login" ? (
             <>
-              Already have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setIsRegister(false)}
-                className="text-emerald-600 font-medium hover:underline"
-              >
-                Login
+              Don't have an account?{" "}
+              <button onClick={() => setMode("register")} className="text-emerald-600 font-medium hover:underline">
+                Register
               </button>
             </>
           ) : (
             <>
-              Don’t have an account?{" "}
-              <button
-                type="button"
-                onClick={() => setIsRegister(true)}
-                className="text-emerald-600 font-medium hover:underline"
-              >
-                Sign up
+              Already have an account?{" "}
+              <button onClick={() => setMode("login")} className="text-emerald-600 font-medium hover:underline">
+                Login
               </button>
             </>
           )}
-        </div>
+        </p>
       </div>
-
-      <style jsx>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fade-in {
-          animation: fade-in 0.4s ease-out;
-        }
-      `}</style>
     </div>
   );
 }

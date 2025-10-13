@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import AuthModal from "./components/AuthModal";
 import AnimatedBackground from "./components/AnimatedBackground";
@@ -11,14 +11,14 @@ import ClimateTrends from "./pages/ClimateTrends";
 import Resources from "./pages/Resources";
 import Contact from "./pages/Contact";
 import Profile from "./pages/Profile";
-import Dashboard from "./pages/Dashboard"; // New Dashboard page
+import Dashboard from "./pages/Dashboard";
+import AdminMessages from "./pages/AdminMessages"; 
 
 export default function App() {
-  // Load user from localStorage to persist login
   const storedUser = JSON.parse(localStorage.getItem("user")) || null;
 
-  const [isAuthenticated, setIsAuthenticated] = useState(!!storedUser);
   const [user, setUser] = useState(storedUser);
+  const [isAuthenticated, setIsAuthenticated] = useState(!!storedUser);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState("login");
 
@@ -35,6 +35,8 @@ export default function App() {
     localStorage.removeItem("user");
   };
 
+  const isAdmin = user?.role === "admin";
+
   useEffect(() => {
     const stored = JSON.parse(localStorage.getItem("user"));
     if (stored) {
@@ -46,10 +48,8 @@ export default function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-green-100 relative">
-        {/* Background */}
         <AnimatedBackground />
 
-        {/* Navbar */}
         <Navbar
           isAuthenticated={isAuthenticated}
           user={user}
@@ -60,7 +60,6 @@ export default function App() {
           }}
         />
 
-        {/* Auth Modal */}
         {showAuthModal && (
           <AuthModal
             isOpen={showAuthModal}
@@ -71,7 +70,6 @@ export default function App() {
           />
         )}
 
-        {/* Page Content */}
         <div className="relative z-10 container mx-auto px-4 py-8 max-w-6xl">
           <Routes>
             <Route path="/" element={<SoilAnalyzer user={user} />} />
@@ -80,32 +78,7 @@ export default function App() {
             <Route path="/resources" element={<Resources />} />
             <Route path="/contact" element={<Contact />} />
 
-            {/* Dashboard Route */}
-            <Route
-              path="/dashboard"
-              element={
-                isAuthenticated ? (
-                  <Dashboard user={user} />
-                ) : (
-                  <div className="text-center py-16">
-                    <p className="text-lg text-gray-700 mb-4">
-                      Please log in to view the dashboard.
-                    </p>
-                    <button
-                      onClick={() => {
-                        setShowAuthModal(true);
-                        setAuthMode("login");
-                      }}
-                      className="px-6 py-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600"
-                    >
-                      Login
-                    </button>
-                  </div>
-                )
-              }
-            />
-
-            {/* Profile Route */}
+            {/* Profile */}
             <Route
               path="/profile"
               element={
@@ -129,6 +102,48 @@ export default function App() {
                 )
               }
             />
+
+            {/* Dashboard */}
+            <Route
+              path="/dashboard"
+              element={
+                isAuthenticated ? (
+                  <Dashboard user={user} />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
+
+            {/* Admin Messages */}
+            <Route
+              path="/admin/messages"
+              element={
+                isAuthenticated && isAdmin ? (
+                  <AdminMessages />
+                ) : (
+                  <div className="text-center py-16">
+                    <p className="text-lg text-red-600 mb-4">
+                      Access denied. Admins only.
+                    </p>
+                    {!isAuthenticated && (
+                      <button
+                        onClick={() => {
+                          setShowAuthModal(true);
+                          setAuthMode("login");
+                        }}
+                        className="px-6 py-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600"
+                      >
+                        Login
+                      </button>
+                    )}
+                  </div>
+                )
+              }
+            />
+
+            {/* Redirect unknown routes */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </div>
