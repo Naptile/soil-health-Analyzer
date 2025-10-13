@@ -10,6 +10,8 @@ import {
   Search as SearchIcon,
 } from "lucide-react";
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
 export default function AdminMessages() {
   const [messages, setMessages] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -22,7 +24,7 @@ export default function AdminMessages() {
   const fetchMessages = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:5000/api/contact");
+      const res = await fetch(`${API_URL}/api/contact`);
       const data = await res.json();
       if (res.ok) {
         setMessages(data);
@@ -39,7 +41,7 @@ export default function AdminMessages() {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this message?")) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/contact/${id}`, { method: "DELETE" });
+      const res = await fetch(`${API_URL}/api/contact/${id}`, { method: "DELETE" });
       if (res.ok) fetchMessages();
       else alert("Failed to delete message");
     } catch (err) {
@@ -50,7 +52,7 @@ export default function AdminMessages() {
 
   const markAsRead = async (id) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/contact/${id}/read`, { method: "PATCH" });
+      const res = await fetch(`${API_URL}/api/contact/${id}/read`, { method: "PATCH" });
       if (res.ok) fetchMessages();
       else alert("Failed to mark as read");
     } catch (err) {
@@ -59,7 +61,6 @@ export default function AdminMessages() {
     }
   };
 
-  // Filter messages based on search
   useEffect(() => {
     const result = messages.filter(
       (m) =>
@@ -68,14 +69,13 @@ export default function AdminMessages() {
         m.message.toLowerCase().includes(search.toLowerCase())
     );
     setFiltered(result);
-    setCurrentPage(1); // reset to first page
+    setCurrentPage(1);
   }, [search, messages]);
 
   useEffect(() => {
     fetchMessages();
   }, []);
 
-  // Pagination logic
   const indexOfLast = currentPage * itemsPerPage;
   const indexOfFirst = indexOfLast - itemsPerPage;
   const currentItems = filtered.slice(indexOfFirst, indexOfLast);
@@ -88,7 +88,6 @@ export default function AdminMessages() {
         <h2 className="text-2xl font-bold text-gray-800">Admin: Messages</h2>
       </div>
 
-      {/* Search bar */}
       <div className="flex items-center gap-2">
         <input
           type="text"
@@ -100,7 +99,6 @@ export default function AdminMessages() {
         <SearchIcon className="w-5 h-5 text-gray-400" />
       </div>
 
-      {/* Loader / Error / Messages */}
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
@@ -132,9 +130,7 @@ export default function AdminMessages() {
                   <span className="text-gray-600">{msg.city || "N/A"}</span>
                 </div>
                 <p className="text-gray-700">{msg.message}</p>
-                <p className="mt-2 text-xs text-gray-400">
-                  {new Date(msg.createdAt).toLocaleString()}
-                </p>
+                <p className="mt-2 text-xs text-gray-400">{new Date(msg.createdAt).toLocaleString()}</p>
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   {!msg.read && (
@@ -156,7 +152,6 @@ export default function AdminMessages() {
             ))}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center items-center gap-2 mt-6">
               {Array.from({ length: totalPages }, (_, i) => (
