@@ -8,8 +8,12 @@ import {
   Legend,
   ResponsiveContainer,
   CartesianGrid,
-} from "recharts";
-import { CloudSun, Loader2, Search, History, RefreshCw } from "lucide-react";
+  CloudSun,
+  Loader2,
+  Search,
+  History,
+  RefreshCw,
+} from "lucide-react";
 
 export default function ClimateTrends() {
   const [forecastData, setForecastData] = useState([]);
@@ -21,7 +25,9 @@ export default function ClimateTrends() {
   const [lastUpdated, setLastUpdated] = useState(null);
 
   const API_KEY = process.env.REACT_APP_WEATHER_API;
+  const API_URL = process.env.REACT_APP_API_URL; // Backend URL
 
+  // Fetch climate data
   const fetchClimate = async (city) => {
     try {
       setLoading(true);
@@ -32,13 +38,12 @@ export default function ClimateTrends() {
         `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${API_KEY}`
       );
       const geoData = await geoRes.json();
-      if (!geoData || geoData.length === 0)
-        throw new Error("Location not found");
+      if (!geoData || geoData.length === 0) throw new Error("Location not found");
 
       const { lat, lon, name, country } = geoData[0];
       setLocation(`${name}, ${country}`);
 
-      // Step 2: Get 24-hour forecast (unchanged)
+      // Step 2: Get 24-hour forecast
       const forecastRes = await fetch(
         `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
       );
@@ -52,16 +57,13 @@ export default function ClimateTrends() {
       }));
       setForecastData(forecastChart);
 
-      // ✅ Step 3: Simulated 5-day history (natural-looking)
+      // Step 3: Simulated 5-day history
       const currentTemp = forecastData.list[0]?.main?.temp || 25;
-
-      // Create a trend that gently rises or falls based on region
-      const variation = (Math.random() - 0.5) * 2; // random ±1 influence
-      const trend = currentTemp > 25 ? -1 : 1; // hot cities cool slightly, cold cities warm slightly
+      const variation = (Math.random() - 0.5) * 2;
+      const trend = currentTemp > 25 ? -1 : 1;
 
       const simulatedHistory = Array.from({ length: 5 }, (_, i) => {
-        const dailyShift =
-          trend * (Math.random() * 1.5) + variation * (Math.random() * 0.5);
+        const dailyShift = trend * (Math.random() * 1.5) + variation * (Math.random() * 0.5);
         return {
           day: `-${5 - i}d`,
           temp: Number((currentTemp + dailyShift - (5 - i) * 0.5).toFixed(1)),
@@ -70,11 +72,36 @@ export default function ClimateTrends() {
 
       setHistoryData(simulatedHistory);
       setLastUpdated(new Date().toLocaleTimeString());
+
+      // Step 4: Save search to backend
+      await saveSearch(name, country, lat, lon);
     } catch (err) {
       console.error(err);
       setError("Failed to load climate data. Try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Save user search to backend
+  const saveSearch = async (name, country, lat, lon) => {
+    if (!API_URL) return;
+
+    try {
+      const res = await fetch(`${API_URL}/api/searches`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          city: name,
+          country,
+          lat,
+          lon,
+          timestamp: new Date(),
+        }),
+      });
+      if (!res.ok) console.warn("Failed to save search");
+    } catch (err) {
+      console.error("Error saving search:", err);
     }
   };
 
@@ -134,7 +161,7 @@ export default function ClimateTrends() {
         <p className="text-red-500 text-center">{error}</p>
       ) : (
         <>
-          {/* Forecast Chart (unchanged) */}
+          {/* Forecast Chart */}
           <div className="bg-white/70 backdrop-blur-lg rounded-3xl shadow-lg p-6">
             <h3 className="text-lg font-semibold mb-4 text-gray-700 text-center">
               {location} — Next 24 Hours Forecast
@@ -146,37 +173,19 @@ export default function ClimateTrends() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="temp"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  name="Temperature (°C)"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="humidity"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  name="Humidity (%)"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="wind"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  name="Wind (m/s)"
-                />
+                <Line type="monotone" dataKey="temp" stroke="#10b981" strokeWidth={2} name="Temperature (°C)" />
+                <Line type="monotone" dataKey="humidity" stroke="#3b82f6" strokeWidth={2} name="Humidity (%)" />
+                <Line type="monotone" dataKey="wind" stroke="#f59e0b" strokeWidth={2} name="Wind (m/s)" />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Historical Chart (realistic trend simulation) */}
+          {/* Historical Chart */}
           <div className="bg-white/70 backdrop-blur-lg rounded-3xl shadow-lg p-6">
             <div className="flex items-center gap-2 mb-4">
               <History className="w-6 h-6 text-emerald-600" />
               <h3 className="text-lg font-semibold text-gray-700">
-                Past 5 Days Temperature Trend (Realistic Simulation)
+                Past 5 Days Temperature Trend (Simulation)
               </h3>
             </div>
             <ResponsiveContainer width="100%" height={300}>
@@ -186,14 +195,7 @@ export default function ClimateTrends() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="temp"
-                  stroke="#ef4444"
-                  strokeWidth={3}
-                  dot={{ r: 5 }}
-                  name="Avg Temp (°C)"
-                />
+                <Line type="monotone" dataKey="temp" stroke="#ef4444" strokeWidth={3} dot={{ r: 5 }} name="Avg Temp (°C)" />
               </LineChart>
             </ResponsiveContainer>
           </div>
