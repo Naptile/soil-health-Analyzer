@@ -1,158 +1,160 @@
 import React, { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { Cloud, MapPin, Thermometer, Droplet, Wind } from "lucide-react";
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 
-// Fix default marker icons for Leaflet
+// Default marker fix for Leaflet
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
-
-let DefaultIcon = L.icon({
-  iconUrl: markerIcon,
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
   shadowUrl: markerShadow,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
 });
-L.Marker.prototype.options.icon = DefaultIcon;
 
-export default function WeatherForecast({ user }) {
-  const [weatherData, setWeatherData] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [city, setCity] = useState(user?.location || "Nairobi");
-  const [coords, setCoords] = useState({
-    lat: user?.coords?.lat || -1.2921,
-    lon: user?.coords?.lon || 36.8219,
-  });
+export default function WeatherForecast() {
+  const API_KEY = process.env.REACT_APP_WEATHER_API;
+  const [location, setLocation] = useState("Nairobi");
+  const [weather, setWeather] = useState(null);
+  const [coords, setCoords] = useState({ lat: -1.286389, lon: 36.817223 });
+  const [error, setError] = useState("");
 
-  const API_KEY = "66d694db9127b652fff02964c0afa215";
-
-  const fetchCoords = async (cityName) => {
-    try {
-      const geoRes = await fetch(
-        `https://api.openweathermap.org/geo/1.0/direct?q=${cityName}&limit=1&appid=${API_KEY}`
-      );
-      const geoData = await geoRes.json();
-      if (geoData.length > 0) {
-        return { lat: geoData[0].lat, lon: geoData[0].lon };
-      } else {
-        alert("City not found!");
-        return null;
-      }
-    } catch (error) {
-      console.error("Error fetching coordinates:", error);
-      return null;
-    }
-  };
-
-  const fetchWeather = async (latitude, longitude) => {
-    try {
-      setLoading(true);
-      const res = await fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=${API_KEY}`
-      );
-      const data = await res.json();
-      setWeatherData({
-        temp: data.main.temp,
-        humidity: data.main.humidity,
-        wind_speed: data.wind.speed,
-        description: data.weather[0].description,
-        city: data.name,
-      });
-      setCoords({ lat: latitude, lon: longitude });
-    } catch (error) {
-      console.error("Error fetching weather:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Initial fetch based on user's location
+  // Fetch weather data
   useEffect(() => {
-    if (user?.location) {
-      fetchCoords(user.location).then((newCoords) => {
-        if (newCoords) fetchWeather(newCoords.lat, newCoords.lon);
-      });
-    } else {
-      fetchWeather(coords.lat, coords.lon);
+    if (!API_KEY) {
+      setError("⚠️ Missing API key. Please set REACT_APP_WEATHER_API in environment variables.");
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    const newCoords = await fetchCoords(city);
-    if (newCoords) {
-      fetchWeather(newCoords.lat, newCoords.lon);
-    }
-  };
+    const fetchWeather = async () => {
+      try {
+        const res = await fetch(
+          `https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${API_KEY}&units=metric`
+        );
+        const data = await res.json();
+        if (data.cod !== 200) throw new Error(data.message);
+        setWeather(data);
+        setCoords({ lat: data.coord.lat, lon: data.coord.lon });
+        setError("");
+      } catch (err) {
+        setError(err.message);
+        setWeather(null);
+      }
+    };
+
+    fetchWeather();
+  }, [location, API_KEY]);
+
+  // Handle map click
+  function MapClickHandler() {
+    useMapEvents({
+      click(e) {
+        const { lat, lng } = e.latlng;
+        setCoords({ lat, lon: lng });
+        fetch(
+          `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lng}&appid=${API_KEY}&units=metric`
+        )
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.cod === 200) {
+              setWeather(data);
+              setLocation(data.name || `Lat: ${lat.toFixed(2)}, Lon: ${lng.toFixed(2)}`);
+            }
+          });
+      },
+    });
+    return null;
+  }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800">Weather Forecast</h2>
+      {/* Header */}
+      <div className="text-center p-6 bg-gradient-to-r from-sky-500 to-indigo-500 text-white rounded-3xl shadow-lg">
+        <h2 className="text-2xl font-bold mb-2">Weather Forecast</h2>
+        <p>Check real-time weather updates anywhere in the world.</p>
+      </div>
 
-      {/* Search */}
-      <form
-        onSubmit={handleSearch}
-        className="flex gap-2 items-center w-full max-w-md"
-      >
+      {/* Search Bar */}
+      <div className="bg-white/80 p-4 rounded-2xl shadow-lg flex items-center gap-3">
+        <MapPin className="text-sky-500" />
         <input
           type="text"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          placeholder="Enter your city"
-          className="flex-1 p-3 rounded-xl border border-gray-200 focus:outline-none focus:border-emerald-400"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="Enter city name..."
+          className="flex-grow p-2 rounded-lg border border-gray-200 focus:border-sky-400 outline-none"
         />
         <button
-          type="submit"
-          className="px-6 py-3 bg-emerald-500 text-white rounded-xl hover:shadow-lg transition-all"
+          onClick={() => setLocation(location)}
+          className="bg-sky-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-sky-600"
         >
           Search
         </button>
-      </form>
+      </div>
 
-      {loading ? (
-        <p>Loading weather data...</p>
-      ) : weatherData ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Weather Info */}
-          <div className="bg-white/80 backdrop-blur-lg p-6 rounded-3xl shadow-xl">
-            <h3 className="text-xl font-bold mb-4">{weatherData.city}</h3>
-            <p className="text-lg">
-              <span className="font-semibold">Temperature:</span> {weatherData.temp}°C
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-100 text-red-700 p-3 rounded-lg text-center">
+          {error}
+        </div>
+      )}
+
+      {/* Weather Info */}
+      {weather && (
+        <div className="bg-white/80 p-6 rounded-3xl shadow-lg grid md:grid-cols-2 gap-6 items-center">
+          <div>
+            <h3 className="text-2xl font-bold mb-2 flex items-center gap-2">
+              <Cloud className="text-sky-500" />
+              {weather.name}, {weather.sys.country}
+            </h3>
+            <div className="text-5xl font-bold text-sky-600 mb-3">
+              {weather.main.temp}°C
+            </div>
+            <p className="text-gray-700 capitalize">
+              {weather.weather[0].description}
             </p>
-            <p className="text-lg">
-              <span className="font-semibold">Humidity:</span> {weatherData.humidity}%
-            </p>
-            <p className="text-lg">
-              <span className="font-semibold">Wind Speed:</span> {weatherData.wind_speed} m/s
-            </p>
-            <p className="text-lg capitalize">
-              <span className="font-semibold">Condition:</span> {weatherData.description}
-            </p>
+            <div className="grid grid-cols-3 gap-4 mt-4">
+              <div className="flex flex-col items-center">
+                <Thermometer className="text-orange-500" />
+                <span className="text-sm">Feels {weather.main.feels_like}°C</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <Droplet className="text-blue-500" />
+                <span className="text-sm">Humidity {weather.main.humidity}%</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <Wind className="text-green-500" />
+                <span className="text-sm">Wind {weather.wind.speed} m/s</span>
+              </div>
+            </div>
           </div>
 
           {/* Map */}
-          <div className="h-96 w-full rounded-3xl overflow-hidden shadow-xl">
+          <div className="h-72 rounded-2xl overflow-hidden shadow-lg">
             <MapContainer
               center={[coords.lat, coords.lon]}
-              zoom={10}
-              scrollWheelZoom={false}
-              style={{ height: "100%", width: "100%" }}
+              zoom={8}
+              scrollWheelZoom={true}
+              className="h-full w-full"
             >
               <TileLayer
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution="&copy; OpenStreetMap contributors"
+                attribution='&copy; OpenStreetMap contributors'
               />
               <Marker position={[coords.lat, coords.lon]}>
-                <Popup>{weatherData.city}</Popup>
+                <Popup>
+                  <strong>{weather.name}</strong>
+                  <br />
+                  {weather.main.temp}°C
+                </Popup>
               </Marker>
+              <MapClickHandler />
             </MapContainer>
           </div>
         </div>
-      ) : (
-        <p className="text-red-600">Failed to load weather data.</p>
       )}
     </div>
   );
