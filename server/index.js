@@ -10,13 +10,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ✅ CORS: allow any Render frontend & localhost
+// ✅ Explicit CORS Setup
+const allowedOrigins = [
+  "https://soil-health-analyzer-4-nd9o.onrender.com", // <-- your frontend Render domain
+  "https://soil-health-analyzer-8-du5m.onrender.com",   // <-- your backend Render domain
+  "http://localhost:3000"
+];
+
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin || origin.includes(".onrender.com") || origin.includes("localhost")) {
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
+        console.log("❌ Blocked by CORS:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
@@ -112,8 +119,7 @@ app.patch("/api/contact/:id/read", async (req, res) => {
 app.get("/api/weather", async (req, res) => {
   try {
     const { lat, lon, city } = req.query;
-    let latitude = lat,
-      longitude = lon;
+    let latitude = lat, longitude = lon;
 
     if (city && !lat && !lon) {
       const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${process.env.WEATHER_API_KEY}`;
@@ -151,8 +157,7 @@ app.get("/api/weather", async (req, res) => {
 app.get("/api/climate", async (req, res) => {
   try {
     const { lat, lon, city } = req.query;
-    let latitude = lat,
-      longitude = lon;
+    let latitude = lat, longitude = lon;
 
     if (city && !lat && !lon) {
       const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${process.env.WEATHER_API_KEY}`;
