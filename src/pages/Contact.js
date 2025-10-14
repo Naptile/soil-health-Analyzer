@@ -23,7 +23,13 @@ export default function Contact() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
-  const API_KEY = process.env.REACT_APP_WEATHER_API; // Optional for map search
+  const API_KEY = process.env.REACT_APP_WEATHER_API;
+
+  // Automatically choose backend URL based on environment
+  const BACKEND_URL =
+    window.location.hostname === "localhost"
+      ? "http://localhost:5000"
+      : "https://soil-health-analyzer-8-du5m.onrender.com";
 
   // Submit contact form
   const handleSubmit = async (e) => {
@@ -33,14 +39,11 @@ export default function Contact() {
     setSuccess("");
 
     try {
-      const res = await fetch(
-        "https://soil-health-analyzer-8-du5m.onrender.com/api/contact",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, email, message, city }),
-        }
-      );
+      const res = await fetch(`${BACKEND_URL}/api/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, message, city }),
+      });
 
       const data = await res.json();
 
