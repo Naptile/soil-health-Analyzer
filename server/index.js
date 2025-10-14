@@ -10,7 +10,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ✅ Allow both frontend & local dev access
+// ✅ CORS: Allow frontend + localhost
 const allowedOrigins = [
   "https://soil-health-analyzer-frontend.onrender.com",
   "https://soil-health-analyzer-8-du5m.onrender.com",
@@ -47,7 +47,6 @@ const contactSchema = new mongoose.Schema({
   read: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
-
 const Contact = mongoose.model("Contact", contactSchema);
 
 const userSchema = new mongoose.Schema({
@@ -57,7 +56,6 @@ const userSchema = new mongoose.Schema({
   role: { type: String, default: "user" },
   createdAt: { type: Date, default: Date.now },
 });
-
 const User = mongoose.model("User", userSchema);
 
 // --- Default route ---
@@ -89,7 +87,7 @@ app.get("/api/contact", async (req, res) => {
     const messages = await Contact.find().sort({ createdAt: -1 });
     res.json(messages);
   } catch (err) {
-    console.error(err);
+    console.error("❌ Get contacts error:", err);
     res.status(500).json({ error: "Failed to fetch messages." });
   }
 });
@@ -100,7 +98,7 @@ app.delete("/api/contact/:id", async (req, res) => {
     await Contact.findByIdAndDelete(id);
     res.json({ success: true, message: "Message deleted successfully!" });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Delete contact error:", err);
     res.status(500).json({ error: "Failed to delete message." });
   }
 });
@@ -111,68 +109,58 @@ app.patch("/api/contact/:id/read", async (req, res) => {
     const msg = await Contact.findByIdAndUpdate(id, { read: true }, { new: true });
     res.json({ success: true, message: "Message marked as read", data: msg });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Update contact error:", err);
     res.status(500).json({ error: "Failed to update message." });
   }
 });
 
-// --- Weather API ---
+// --- Weather & Climate APIs ---
+async function getGeoCoordinates(city) {
+  const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${process.env.WEATHER_API_KEY}`;
+  const geoRes = await fetch(geoUrl);
+  const geoData = await geoRes.json();
+  if (!geoData || geoData.length === 0) return null;
+  return { lat: geoData[0].lat, lon: geoData[0].lon };
+}
+
 app.get("/api/weather", async (req, res) => {
   try {
-    const { lat, lon, city } = req.query;
-    let latitude = lat, longitude = lon;
+    let { lat, lon, city } = req.query;
 
-    if (city && !lat && !lon) {
-      const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${process.env.WEATHER_API_KEY}`;
-      const geoRes = await fetch(geoUrl);
-      const geoData = await geoRes.json();
-
-      if (!geoData || geoData.length === 0)
-        return res.status(404).json({ error: "City not found" });
-
-      latitude = geoData[0].lat;
-      longitude = geoData[0].lon;
+    if (city && (!lat || !lon)) {
+      const coords = await getGeoCoordinates(city);
+      if (!coords) return res.status(404).json({ error: "City not found" });
+      lat = coords.lat;
+      lon = coords.lon;
     }
 
-    if (!latitude || !longitude)
-      return res.status(400).json({ error: "Missing lat/lon or city parameter." });
+    if (!lat || !lon) return res.status(400).json({ error: "Missing lat/lon or city parameter." });
 
-    const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${latitude}&lon=${longitude}&appid=${process.env.WEATHER_API_KEY}&units=metric`;
+    const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&appid=${process.env.WEATHER_API_KEY}&units=metric`;
     const response = await fetch(url);
     const data = await response.json();
 
-    res.json({
-      success: true,
-      city: city || data.timezone,
-      coords: { lat: latitude, lon: longitude },
-      current: data.current,
-      daily: data.daily,
-    });
+    res.json({ success: true, city: city || data.timezone, coords: { lat, lon }, current: data.current, daily: data.daily });
   } catch (err) {
     console.error("❌ Weather error:", err);
     res.status(500).json({ error: "Failed to fetch weather data." });
   }
 });
 
-// --- Climate Trends API ---
 app.get("/api/climate", async (req, res) => {
   try {
-    const { lat, lon, city } = req.query;
-    let latitude = lat, longitude = lon;
+    let { lat, lon, city } = req.query;
 
-    if (city && !lat && !lon) {
-      const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${process.env.WEATHER_API_KEY}`;
-      const geoRes = await fetch(geoUrl);
-      const geoData = await geoRes.json();
-
-      if (!geoData || geoData.length === 0)
-        return res.status(404).json({ error: "City not found" });
-
-      latitude = geoData[0].lat;
-      longitude = geoData[0].lon;
+    if (city && (!lat || !lon)) {
+      const coords = await getGeoCoordinates(city);
+      if (!coords) return res.status(404).json({ error: "City not found" });
+      lat = coords.lat;
+      lon = coords.lon;
     }
 
-    const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${latitude}&lon=${longitude}&appid=${process.env.WEATHER_API_KEY}&units=metric`;
+    if (!lat || !lon) return res.status(400).json({ error: "Missing lat/lon or city parameter." });
+
+    const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&appid=${process.env.WEATHER_API_KEY}&units=metric`;
     const response = await fetch(url);
     const data = await response.json();
 
@@ -193,12 +181,10 @@ app.get("/api/climate", async (req, res) => {
 app.post("/api/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    if (!name || !email || !password)
-      return res.status(400).json({ error: "All fields are required." });
+    if (!name || !email || !password) return res.status(400).json({ error: "All fields are required." });
 
     const existingUser = await User.findOne({ email });
-    if (existingUser)
-      return res.status(400).json({ error: "Email already registered." });
+    if (existingUser) return res.status(400).json({ error: "Email already registered." });
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new User({ name, email, password: hashedPassword });
@@ -214,8 +200,7 @@ app.post("/api/register", async (req, res) => {
 app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ error: "Email and password are required." });
+    if (!email || !password) return res.status(400).json({ error: "Email and password are required." });
 
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ error: "Invalid credentials." });
@@ -231,9 +216,7 @@ app.post("/api/login", async (req, res) => {
 });
 
 // --- Fallback ---
-app.use((req, res) => {
-  res.status(404).json({ error: "Route not found." });
-});
+app.use((req, res) => res.status(404).json({ error: "Route not found." }));
 
 // --- Start Server ---
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
