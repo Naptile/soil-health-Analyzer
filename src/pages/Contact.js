@@ -15,17 +15,18 @@ L.Icon.Default.mergeOptions({
 export default function Contact() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
   const [city, setCity] = useState("Nairobi");
+  const [message, setMessage] = useState("");
   const [query, setQuery] = useState("");
-  const [position, setPosition] = useState([-1.286389, 36.817223]); // default Nairobi
+  const [position, setPosition] = useState([-1.286389, 36.817223]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
   const API_KEY = process.env.REACT_APP_WEATHER_API;
+  const BASE_URL = process.env.REACT_APP_API_BASE || "https://soil-health-analyzer-8-du5m.onrender.com";
 
-  // Handle form submission (connected to Render backend)
+  // Submit form to backend
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -33,31 +34,31 @@ export default function Contact() {
     setSuccess("");
 
     try {
-      const res = await fetch("https://soil-health-analyzer-8-du5m.onrender.com/api/contact", {
+      const res = await fetch(`${BASE_URL}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, message, city }),
+        body: JSON.stringify({ name, email, city, message }),
       });
-
       const data = await res.json();
 
       if (res.ok) {
         setSuccess(data.message || "Message sent successfully!");
         setName("");
         setEmail("");
+        setCity("Nairobi");
         setMessage("");
       } else {
-        setError(data.error || "Failed to send message.");
+        setError(data.error || "Failed to send message. Please try again.");
       }
     } catch (err) {
       console.error(err);
-      setError("Error connecting to the server.");
+      setError("Error connecting to the server. Please try again later.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle city search for map
+  // Search city for map
   const handleCitySearch = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -170,8 +171,16 @@ export default function Contact() {
               className="w-full p-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm"
               required
             />
+            <input
+              type="text"
+              placeholder="Your City"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              className="w-full p-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm"
+              required
+            />
             <textarea
-              placeholder={`Your Message (City: ${city})`}
+              placeholder="Your Message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               className="w-full p-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm resize-none"
