@@ -8,12 +8,8 @@ import {
   Legend,
   ResponsiveContainer,
   CartesianGrid,
-  CloudSun,
-  Loader2,
-  Search,
-  History,
-  RefreshCw,
-} from "lucide-react";
+} from "recharts"; // ✅ Correct
+import { CloudSun, Loader2, Search, History, RefreshCw } from "lucide-react";
 
 export default function ClimateTrends() {
   const [forecastData, setForecastData] = useState([]);
@@ -25,15 +21,13 @@ export default function ClimateTrends() {
   const [lastUpdated, setLastUpdated] = useState(null);
 
   const API_KEY = process.env.REACT_APP_WEATHER_API;
-  const API_URL = process.env.REACT_APP_API_URL; // Backend URL
 
-  // Fetch climate data
   const fetchClimate = async (city) => {
     try {
       setLoading(true);
       setError("");
 
-      // Step 1: Get coordinates
+      // Get coordinates
       const geoRes = await fetch(
         `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${API_KEY}`
       );
@@ -43,13 +37,13 @@ export default function ClimateTrends() {
       const { lat, lon, name, country } = geoData[0];
       setLocation(`${name}, ${country}`);
 
-      // Step 2: Get 24-hour forecast
+      // 24-hour forecast
       const forecastRes = await fetch(
         `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
       );
-      const forecastData = await forecastRes.json();
+      const forecastJson = await forecastRes.json();
 
-      const forecastChart = forecastData.list.slice(0, 8).map((item) => ({
+      const forecastChart = forecastJson.list.slice(0, 8).map((item) => ({
         time: new Date(item.dt * 1000).toLocaleTimeString([], { hour: "2-digit" }),
         temp: item.main.temp,
         humidity: item.main.humidity,
@@ -57,8 +51,8 @@ export default function ClimateTrends() {
       }));
       setForecastData(forecastChart);
 
-      // Step 3: Simulated 5-day history
-      const currentTemp = forecastData.list[0]?.main?.temp || 25;
+      // Simulated 5-day history
+      const currentTemp = forecastJson.list[0]?.main?.temp || 25;
       const variation = (Math.random() - 0.5) * 2;
       const trend = currentTemp > 25 ? -1 : 1;
 
@@ -69,12 +63,8 @@ export default function ClimateTrends() {
           temp: Number((currentTemp + dailyShift - (5 - i) * 0.5).toFixed(1)),
         };
       });
-
       setHistoryData(simulatedHistory);
       setLastUpdated(new Date().toLocaleTimeString());
-
-      // Step 4: Save search to backend
-      await saveSearch(name, country, lat, lon);
     } catch (err) {
       console.error(err);
       setError("Failed to load climate data. Try again.");
@@ -83,36 +73,11 @@ export default function ClimateTrends() {
     }
   };
 
-  // Save user search to backend
-  const saveSearch = async (name, country, lat, lon) => {
-    if (!API_URL) return;
-
-    try {
-      const res = await fetch(`${API_URL}/api/searches`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          city: name,
-          country,
-          lat,
-          lon,
-          timestamp: new Date(),
-        }),
-      });
-      if (!res.ok) console.warn("Failed to save search");
-    } catch (err) {
-      console.error("Error saving search:", err);
-    }
-  };
-
-  // Auto-refresh every 10 minutes
   useEffect(() => {
     fetchClimate("Nairobi");
-
     const interval = setInterval(() => {
       fetchClimate(location.split(",")[0] || "Nairobi");
     }, 10 * 60 * 1000);
-
     return () => clearInterval(interval);
   }, []);
 
