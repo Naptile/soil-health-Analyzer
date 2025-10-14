@@ -6,9 +6,9 @@ import {
   YAxis,
   Tooltip,
   Legend,
-  CartesianGrid,
   ResponsiveContainer,
-} from "recharts";
+  CartesianGrid,
+} from "recharts"; // ✅ Correct
 import { CloudSun, Loader2, Search, History, RefreshCw } from "lucide-react";
 
 export default function ClimateTrends() {
@@ -19,56 +19,51 @@ export default function ClimateTrends() {
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [coords, setCoords] = useState({ lat: -1.286389, lon: 36.817223 }); // Nairobi default
 
-  // Fetch climate data from your backend
-  const fetchClimate = async (city, lat = null, lon = null) => {
+  const API_KEY = process.env.REACT_APP_WEATHER_API;
+
+  const fetchClimate = async (city) => {
     try {
       setLoading(true);
       setError("");
 
-      let apiCoords = { lat, lon };
-
-      // Step 1: Get coordinates if not provided
-      if (!lat || !lon) {
-        const geoRes = await fetch(
-          `/api/weather?city=${encodeURIComponent(city)}`
-        );
-        const geoData = await geoRes.json();
-
-        if (!geoData || !geoData.lat || !geoData.lon)
-          throw new Error("Location not found");
-
-        apiCoords = { lat: geoData.lat, lon: geoData.lon };
-        setLocation(`${geoData.name}, ${geoData.country}`);
-      }
-
-      setCoords(apiCoords);
-
-      // Step 2: Fetch climate trends from backend
-      const res = await fetch(
-        `/api/climate?lat=${apiCoords.lat}&lon=${apiCoords.lon}`
+      // Get coordinates
+      const geoRes = await fetch(
+        `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${API_KEY}`
       );
-      const data = await res.json();
+      const geoData = await geoRes.json();
+      if (!geoData || geoData.length === 0) throw new Error("Location not found");
 
-      if (!data || !data.trends) throw new Error("No climate data returned");
+      const { lat, lon, name, country } = geoData[0];
+      setLocation(`${name}, ${country}`);
 
-      // Forecast: next 24 hours (first 8 items)
-      const forecastChart = data.trends.slice(0, 8).map((item) => ({
-        time: item.time || item.date || "", // fallback
-        temp: item.temp,
-        rainfall: item.rainfall || 0,
+      // 24-hour forecast
+      const forecastRes = await fetch(
+        `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
+      );
+      const forecastJson = await forecastRes.json();
+
+      const forecastChart = forecastJson.list.slice(0, 8).map((item) => ({
+        time: new Date(item.dt * 1000).toLocaleTimeString([], { hour: "2-digit" }),
+        temp: item.main.temp,
+        humidity: item.main.humidity,
+        wind: item.wind.speed,
       }));
       setForecastData(forecastChart);
 
-      // History: last 5 days
-      const historyChart = data.trends.slice(-5).map((item, i) => ({
-        day: `-${5 - i}d`,
-        temp: item.temp,
-        rainfall: item.rainfall || 0,
-      }));
-      setHistoryData(historyChart);
+      // Simulated 5-day history
+      const currentTemp = forecastJson.list[0]?.main?.temp || 25;
+      const variation = (Math.random() - 0.5) * 2;
+      const trend = currentTemp > 25 ? -1 : 1;
 
+      const simulatedHistory = Array.from({ length: 5 }, (_, i) => {
+        const dailyShift = trend * (Math.random() * 1.5) + variation * (Math.random() * 0.5);
+        return {
+          day: `-${5 - i}d`,
+          temp: Number((currentTemp + dailyShift - (5 - i) * 0.5).toFixed(1)),
+        };
+      });
+      setHistoryData(simulatedHistory);
       setLastUpdated(new Date().toLocaleTimeString());
     } catch (err) {
       console.error(err);
@@ -78,12 +73,14 @@ export default function ClimateTrends() {
     }
   };
 
-  // Initial fetch
   useEffect(() => {
     fetchClimate("Nairobi");
+    const interval = setInterval(() => {
+      fetchClimate(location.split(",")[0] || "Nairobi");
+    }, 10 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Handle city search
   const handleSearch = (e) => {
     e.preventDefault();
     if (query.trim()) fetchClimate(query);
@@ -141,20 +138,9 @@ export default function ClimateTrends() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="temp"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  name="Temperature (°C)"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="rainfall"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  name="Rainfall (mm)"
-                />
+                <Line type="monotone" dataKey="temp" stroke="#10b981" strokeWidth={2} name="Temperature (°C)" />
+                <Line type="monotone" dataKey="humidity" stroke="#3b82f6" strokeWidth={2} name="Humidity (%)" />
+                <Line type="monotone" dataKey="wind" stroke="#f59e0b" strokeWidth={2} name="Wind (m/s)" />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -164,7 +150,7 @@ export default function ClimateTrends() {
             <div className="flex items-center gap-2 mb-4">
               <History className="w-6 h-6 text-emerald-600" />
               <h3 className="text-lg font-semibold text-gray-700">
-                Past 5 Days Temperature Trend
+                Past 5 Days Temperature Trend (Simulation)
               </h3>
             </div>
             <ResponsiveContainer width="100%" height={300}>
@@ -174,14 +160,7 @@ export default function ClimateTrends() {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="temp"
-                  stroke="#ef4444"
-                  strokeWidth={3}
-                  dot={{ r: 5 }}
-                  name="Avg Temp (°C)"
-                />
+                <Line type="monotone" dataKey="temp" stroke="#ef4444" strokeWidth={3} dot={{ r: 5 }} name="Avg Temp (°C)" />
               </LineChart>
             </ResponsiveContainer>
           </div>
