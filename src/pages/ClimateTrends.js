@@ -1,68 +1,191 @@
-import React, { useState } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
-import { Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
+import { CloudSun, Loader2, Search, History, RefreshCw } from "lucide-react";
 
 export default function ClimateTrends() {
-  const [city, setCity] = useState("Nairobi");
-  const [data, setData] = useState([]);
+  const [forecastData, setForecastData] = useState([]);
+  const [historyData, setHistoryData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [location, setLocation] = useState("Nairobi, Kenya");
+  const [query, setQuery] = useState("");
   const [error, setError] = useState("");
+  const [lastUpdated, setLastUpdated] = useState(null);
+  const [coords, setCoords] = useState({ lat: -1.286389, lon: 36.817223 }); // Nairobi default
 
-  const BACKEND_URL = "https://soil-health-analyzer-8-du5m.onrender.com";
-
-  const fetchClimateData = async () => {
-    setLoading(true);
-    setError("");
+  // Fetch climate data from your backend
+  const fetchClimate = async (city, lat = null, lon = null) => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/climate?city=${city}`);
-      const result = await res.json();
+      setLoading(true);
+      setError("");
 
-      if (!res.ok) throw new Error(result.error || "Failed to load climate data.");
-      setData(result.trends);
+      let apiCoords = { lat, lon };
+
+      // Step 1: Get coordinates if not provided
+      if (!lat || !lon) {
+        const geoRes = await fetch(
+          `/api/weather?city=${encodeURIComponent(city)}`
+        );
+        const geoData = await geoRes.json();
+
+        if (!geoData || !geoData.lat || !geoData.lon)
+          throw new Error("Location not found");
+
+        apiCoords = { lat: geoData.lat, lon: geoData.lon };
+        setLocation(`${geoData.name}, ${geoData.country}`);
+      }
+
+      setCoords(apiCoords);
+
+      // Step 2: Fetch climate trends from backend
+      const res = await fetch(
+        `/api/climate?lat=${apiCoords.lat}&lon=${apiCoords.lon}`
+      );
+      const data = await res.json();
+
+      if (!data || !data.trends) throw new Error("No climate data returned");
+
+      // Forecast: next 24 hours (first 8 items)
+      const forecastChart = data.trends.slice(0, 8).map((item) => ({
+        time: item.time || item.date || "", // fallback
+        temp: item.temp,
+        rainfall: item.rainfall || 0,
+      }));
+      setForecastData(forecastChart);
+
+      // History: last 5 days
+      const historyChart = data.trends.slice(-5).map((item, i) => ({
+        day: `-${5 - i}d`,
+        temp: item.temp,
+        rainfall: item.rainfall || 0,
+      }));
+      setHistoryData(historyChart);
+
+      setLastUpdated(new Date().toLocaleTimeString());
     } catch (err) {
       console.error(err);
-      setError(err.message || "Error fetching data.");
+      setError("Failed to load climate data. Try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="p-8 bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl mt-12 max-w-5xl mx-auto">
-      <h2 className="text-3xl font-bold text-center mb-6 text-emerald-600">🌦 Climate Trends</h2>
+  // Initial fetch
+  useEffect(() => {
+    fetchClimate("Nairobi");
+  }, []);
 
-      <div className="flex flex-col md:flex-row justify-center items-center gap-4 mb-6">
-        <input
-          type="text"
-          placeholder="Enter city (e.g., Nairobi)"
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          className="p-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-emerald-400 w-full md:w-1/2"
-        />
-        <button
-          onClick={fetchClimateData}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-xl shadow-lg transition-all flex items-center gap-2"
-        >
-          {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-          Fetch Data
-        </button>
+  // Handle city search
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (query.trim()) fetchClimate(query);
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <CloudSun className="w-8 h-8 text-emerald-600" />
+          <h2 className="text-2xl font-bold text-gray-800">Climate Trends</h2>
+        </div>
+        <div className="flex items-center gap-2 text-gray-500 text-sm">
+          <RefreshCw className="w-4 h-4 animate-spin-slow text-emerald-500" />
+          {lastUpdated && <span>Last updated: {lastUpdated}</span>}
+        </div>
       </div>
 
-      {error && <div className="text-red-500 text-center mb-4">{error}</div>}
+      {/* Search */}
+      <form onSubmit={handleSearch} className="flex gap-2">
+        <input
+          type="text"
+          placeholder="Search city (e.g., Nairobi, Tokyo)"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="flex-grow p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+        />
+        <button
+          type="submit"
+          className="bg-emerald-500 text-white px-5 py-3 rounded-xl flex items-center gap-2 hover:bg-emerald-600 transition"
+        >
+          <Search className="w-4 h-4" /> Search
+        </button>
+      </form>
 
-      {data.length > 0 && (
-        <div className="h-96">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="rainfall" stroke="#10B981" name="Rainfall (mm)" />
-              <Line type="monotone" dataKey="temp" stroke="#2563EB" name="Temperature (°C)" />
-            </LineChart>
-          </ResponsiveContainer>
+      {/* Loader / Error / Data */}
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
         </div>
+      ) : error ? (
+        <p className="text-red-500 text-center">{error}</p>
+      ) : (
+        <>
+          {/* Forecast Chart */}
+          <div className="bg-white/70 backdrop-blur-lg rounded-3xl shadow-lg p-6">
+            <h3 className="text-lg font-semibold mb-4 text-gray-700 text-center">
+              {location} — Next 24 Hours Forecast
+            </h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={forecastData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="time" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="temp"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  name="Temperature (°C)"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="rainfall"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  name="Rainfall (mm)"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Historical Chart */}
+          <div className="bg-white/70 backdrop-blur-lg rounded-3xl shadow-lg p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <History className="w-6 h-6 text-emerald-600" />
+              <h3 className="text-lg font-semibold text-gray-700">
+                Past 5 Days Temperature Trend
+              </h3>
+            </div>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={historyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="day" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="temp"
+                  stroke="#ef4444"
+                  strokeWidth={3}
+                  dot={{ r: 5 }}
+                  name="Avg Temp (°C)"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </>
       )}
     </div>
   );
