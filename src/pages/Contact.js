@@ -1,31 +1,14 @@
 import React, { useState } from "react";
-import { Phone, Mail, Loader2, Search } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import L from "leaflet";
-
-// Fix default Leaflet icon
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: require("leaflet/dist/images/marker-icon-2x.png"),
-  iconUrl: require("leaflet/dist/images/marker-icon.png"),
-  shadowUrl: require("leaflet/dist/images/marker-shadow.png"),
-});
 
 export default function Contact() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [city, setCity] = useState("");
   const [message, setMessage] = useState("");
-  const [city, setCity] = useState("Nairobi");
-  const [query, setQuery] = useState("");
-  const [position, setPosition] = useState([-1.286389, 36.817223]); // default Nairobi
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const API_KEY = process.env.REACT_APP_WEATHER_API;
-
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -33,157 +16,115 @@ export default function Contact() {
     setSuccess("");
 
     try {
-      const res = await fetch("http://localhost:5000/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, message, city }), // <-- add city
-      });
+      // ✅ Backend URL now points to your deployed Render backend
+      const res = await fetch(
+        `${process.env.REACT_APP_API_BASE || "https://soil-health-analyzer-8-du5m.onrender.com"}/api/contact`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, city, message }),
+        }
+      );
 
       const data = await res.json();
 
       if (res.ok) {
-        setSuccess(data.message);
+        setSuccess(data.message || "Message sent successfully!");
         setName("");
         setEmail("");
+        setCity("");
         setMessage("");
       } else {
-        setError(data.error || "Failed to send message");
+        setError(data.error || "Failed to send message. Please try again.");
       }
     } catch (err) {
       console.error(err);
-      setError("Error connecting to the server.");
+      setError("Error connecting to the server. Please try again later.");
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle city search for map
-  const handleCitySearch = async (e) => {
-    e.preventDefault();
-    if (!query.trim()) return;
-
-    try {
-      const geoRes = await fetch(
-        `https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=1&appid=${API_KEY}`
-      );
-      const geoData = await geoRes.json();
-      if (!geoData || geoData.length === 0) {
-        setError("City not found");
-        return;
-      }
-
-      const { lat, lon, name } = geoData[0];
-      setPosition([lat, lon]);
-      setCity(name); // <-- update city
-      setError("");
-    } catch (err) {
-      console.error(err);
-      setError("Failed to fetch city coordinates");
-    }
-  };
-
   return (
-    <div className="flex justify-center mt-12 px-4">
-      <div className="w-full max-w-5xl flex flex-col md:flex-row bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
-        {/* Left Panel: Contact Info + Map */}
-        <div className="md:w-1/3 bg-emerald-500 p-6 flex flex-col justify-between text-white">
-          <div className="space-y-6">
-            <h2 className="text-3xl font-bold flex items-center gap-3">
-              <Phone className="w-8 h-8" /> Contact Info
-            </h2>
-            <p className="text-gray-100">
-              Reach out to us and we'll respond within 24 hours.
-            </p>
-            <div className="flex flex-col gap-3 text-gray-100">
-              <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5" /> +254 712 345 678
-              </div>
-              <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5" /> naptilepeterson71@gmail.com
-              </div>
-            </div>
-          </div>
+    <div className="max-w-2xl mx-auto bg-white p-8 rounded-2xl shadow-lg border border-emerald-100">
+      <h2 className="text-3xl font-semibold text-emerald-700 mb-6 text-center">
+        Contact Us
+      </h2>
 
-          {/* Map */}
-          <div className="mt-6 h-64 w-full rounded-2xl overflow-hidden shadow-inner">
-            <MapContainer center={position} zoom={13} scrollWheelZoom={false} style={{ height: "100%", width: "100%" }}>
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              />
-              <Marker position={position}>
-                <Popup>{city}</Popup>
-              </Marker>
-            </MapContainer>
-          </div>
-
-          {/* City Search */}
-          <form onSubmit={handleCitySearch} className="mt-4 flex gap-2">
-            <input
-              type="text"
-              placeholder="Search city"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              className="flex-grow p-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-white text-black"
-            />
-            <button
-              type="submit"
-              className="bg-white text-emerald-500 px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-gray-100 transition"
-            >
-              <Search className="w-4 h-4" /> Go
-            </button>
-          </form>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Full Name
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            placeholder="Enter your full name"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
         </div>
 
-        {/* Right Panel: Form */}
-        <div className="md:w-2/3 p-8 space-y-6">
-          {success && (
-            <div className="p-4 bg-green-100 text-green-700 rounded-xl border border-green-200 shadow-sm">
-              {success}
-            </div>
-          )}
-          {error && (
-            <div className="p-4 bg-red-100 text-red-700 rounded-xl border border-red-200 shadow-sm">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="text"
-              placeholder="Your Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full p-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm"
-              required
-            />
-            <input
-              type="email"
-              placeholder="Your Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm"
-              required
-            />
-            <textarea
-              placeholder={`Your Message (City: ${city})`}
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              className="w-full p-4 rounded-2xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-400 shadow-sm resize-none"
-              rows={5}
-              required
-            />
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-emerald-500 text-white rounded-2xl px-6 py-3 font-medium hover:bg-emerald-600 hover:shadow-lg transition-all flex justify-center items-center gap-2"
-            >
-              {loading && <Loader2 className="w-5 h-5 animate-spin" />}
-              Send Message
-            </button>
-          </form>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Email Address
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            placeholder="you@example.com"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
         </div>
-      </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            City / Location
+          </label>
+          <input
+            type="text"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            required
+            placeholder="Enter your city or location"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Message
+          </label>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            required
+            placeholder="Type your message here..."
+            rows="5"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          ></textarea>
+        </div>
+
+        {error && (
+          <p className="text-red-600 text-sm text-center font-medium">{error}</p>
+        )}
+        {success && (
+          <p className="text-emerald-600 text-sm text-center font-medium">
+            {success}
+          </p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-3 bg-emerald-600 text-white font-semibold rounded-lg hover:bg-emerald-700 transition duration-300 disabled:opacity-50"
+        >
+          {loading ? "Sending..." : "Send Message"}
+        </button>
+      </form>
     </div>
   );
 }
