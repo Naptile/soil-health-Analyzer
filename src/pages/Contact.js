@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ResponsiveContainer } from "recharts";
+import { Phone, Mail, Loader2, Search } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -25,12 +25,6 @@ export default function Contact() {
 
   const API_KEY = process.env.REACT_APP_WEATHER_API;
 
-  // 🌐 Base URL — switches automatically for local or live
-  const BASE_URL =
-    process.env.NODE_ENV === "production"
-      ? "https://soil-health-analyzer-8-du5m.onrender.com"
-      : "http://localhost:5000";
-
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,16 +33,17 @@ export default function Contact() {
     setSuccess("");
 
     try {
-      const res = await fetch(`${BASE_URL}/api/contact`, {
+      // ✅ Updated to your live backend
+      const res = await fetch("https://soil-health-analyzer-8-du5m.onrender.com/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, message, city }), // <-- add city
+        body: JSON.stringify({ name, email, message, city }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
-        setSuccess(data.message);
+        setSuccess(data.message || "Message sent successfully!");
         setName("");
         setEmail("");
         setMessage("");
@@ -80,7 +75,7 @@ export default function Contact() {
 
       const { lat, lon, name } = geoData[0];
       setPosition([lat, lon]);
-      setCity(name); // <-- update city
+      setCity(name);
       setError("");
     } catch (err) {
       console.error(err);
