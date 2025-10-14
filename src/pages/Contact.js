@@ -18,18 +18,16 @@ export default function Contact() {
   const [message, setMessage] = useState("");
   const [city, setCity] = useState("Nairobi");
   const [query, setQuery] = useState("");
-  const [position, setPosition] = useState([-1.286389, 36.817223]); // default Nairobi
+  const [position, setPosition] = useState([-1.286389, 36.817223]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
-  const API_KEY = process.env.REACT_APP_WEATHER_API;
-
-  // Automatically choose backend URL based on environment
   const BACKEND_URL =
-    window.location.hostname === "localhost"
-      ? "http://localhost:5000"
-      : "https://soil-health-analyzer-8-du5m.onrender.com";
+    process.env.REACT_APP_BACKEND_URL ||
+    "https://soil-health-analyzer-4-nd9o.onrender.com"; // fallback
+
+  const API_KEY = process.env.REACT_APP_WEATHER_API; // Optional for map search
 
   // Submit contact form
   const handleSubmit = async (e) => {
