@@ -25,7 +25,7 @@ export default function Contact() {
 
   const API_KEY = process.env.REACT_APP_WEATHER_API;
 
-  // Handle form submission
+  // Handle form submission (connected to Render backend)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -33,7 +33,6 @@ export default function Contact() {
     setSuccess("");
 
     try {
-      // ✅ Updated to your live backend
       const res = await fetch("https://soil-health-analyzer-8-du5m.onrender.com/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -48,7 +47,7 @@ export default function Contact() {
         setEmail("");
         setMessage("");
       } else {
-        setError(data.error || "Failed to send message");
+        setError(data.error || "Failed to send message.");
       }
     } catch (err) {
       console.error(err);
