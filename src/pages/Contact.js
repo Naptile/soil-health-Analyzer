@@ -1,3 +1,4 @@
+// --- Contact.js (Updated Backend URL) ---
 import React, { useState } from "react";
 import { Phone, Mail, Loader2, Search } from "lucide-react";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
@@ -23,10 +24,6 @@ export default function Contact() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
-  const BACKEND_URL =
-    process.env.REACT_APP_BACKEND_URL ||
-    "https://soil-health-analyzer-4-nd9o.onrender.com"; // fallback
-
   const API_KEY = process.env.REACT_APP_WEATHER_API; // Optional for map search
 
   // Submit contact form
@@ -37,25 +34,28 @@ export default function Contact() {
     setSuccess("");
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/contact`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, message, city }),
-      });
+      const res = await fetch(
+        "https://soil-health-analyzer-4-nd9o.onrender.com/api/contact",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, message, city }),
+        }
+      );
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Failed to send message");
+      }
 
       const data = await res.json();
-
-      if (res.ok) {
-        setSuccess(data.message || "Message sent successfully!");
-        setName("");
-        setEmail("");
-        setMessage("");
-      } else {
-        setError(data.error || "Failed to send message");
-      }
+      setSuccess(data.message || "Message sent successfully!");
+      setName("");
+      setEmail("");
+      setMessage("");
     } catch (err) {
-      console.error(err);
-      setError("Error connecting to the server.");
+      console.error("Contact form error:", err);
+      setError("Error connecting to the server. Please try again.");
     } finally {
       setLoading(false);
     }
