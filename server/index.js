@@ -12,8 +12,8 @@ const PORT = process.env.PORT || 5000;
 
 // ✅ Explicit CORS Setup
 const allowedOrigins = [
-  "https://soil-health-analyzer-4-nd9o.onrender.com", // <-- your frontend Render domain
-  "https://soil-health-analyzer-8-du5m.onrender.com",   // <-- your backend Render domain
+  "https://soil-health-analyzer-4-nd9o.onrender.com", 
+  "https://soil-health-analyzer-8-du5m.onrender.com",   
   "http://localhost:3000"
 ];
 
