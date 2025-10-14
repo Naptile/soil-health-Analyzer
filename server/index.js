@@ -10,8 +10,26 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// --- Middleware ---
-app.use(cors());
+// ✅ Allow both frontend & local dev access
+const allowedOrigins = [
+  "https://soil-health-analyzer-frontend.onrender.com",
+  "https://soil-health-analyzer-8-du5m.onrender.com",
+  "http://localhost:3000"
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 // --- MongoDB Connection ---
@@ -20,7 +38,7 @@ mongoose
   .then(() => console.log("✅ Connected to MongoDB"))
   .catch((err) => console.error("❌ MongoDB connection failed:", err));
 
-// --- Contact Schema ---
+// --- Schemas ---
 const contactSchema = new mongoose.Schema({
   name: String,
   email: String,
@@ -32,7 +50,6 @@ const contactSchema = new mongoose.Schema({
 
 const Contact = mongoose.model("Contact", contactSchema);
 
-// --- User Schema ---
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
@@ -52,14 +69,17 @@ app.get("/", (req, res) => {
 app.post("/api/contact", async (req, res) => {
   try {
     const { name, email, message, city } = req.body;
-    if (!name || !email || !message)
+    if (!name || !email || !message) {
       return res.status(400).json({ error: "All fields are required." });
+    }
 
     const newMessage = new Contact({ name, email, message, city });
     await newMessage.save();
+
+    console.log("📩 New contact message saved:", newMessage);
     res.status(201).json({ success: true, message: "Message sent successfully!" });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Contact error:", err);
     res.status(500).json({ error: "Failed to send message." });
   }
 });
@@ -96,23 +116,19 @@ app.patch("/api/contact/:id/read", async (req, res) => {
   }
 });
 
-// --- Weather Route (Updated) ---
+// --- Weather API ---
 app.get("/api/weather", async (req, res) => {
   try {
     const { lat, lon, city } = req.query;
+    let latitude = lat, longitude = lon;
 
-    let latitude = lat;
-    let longitude = lon;
-
-    // If city provided, get its coordinates first
     if (city && !lat && !lon) {
-      const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${process.env.REACT_APP_WEATHER_API}`;
+      const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${process.env.WEATHER_API_KEY}`;
       const geoRes = await fetch(geoUrl);
       const geoData = await geoRes.json();
 
-      if (!geoData || geoData.length === 0) {
+      if (!geoData || geoData.length === 0)
         return res.status(404).json({ error: "City not found" });
-      }
 
       latitude = geoData[0].lat;
       longitude = geoData[0].lon;
@@ -121,7 +137,7 @@ app.get("/api/weather", async (req, res) => {
     if (!latitude || !longitude)
       return res.status(400).json({ error: "Missing lat/lon or city parameter." });
 
-    const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${latitude}&lon=${longitude}&appid=${process.env.REACT_APP_WEATHER_API}&units=metric`;
+    const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${latitude}&lon=${longitude}&appid=${process.env.WEATHER_API_KEY}&units=metric`;
     const response = await fetch(url);
     const data = await response.json();
 
@@ -133,48 +149,42 @@ app.get("/api/weather", async (req, res) => {
       daily: data.daily,
     });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Weather error:", err);
     res.status(500).json({ error: "Failed to fetch weather data." });
   }
 });
 
-// --- Climate Trends Route ---
+// --- Climate Trends API ---
 app.get("/api/climate", async (req, res) => {
   try {
     const { lat, lon, city } = req.query;
-
-    let latitude = lat;
-    let longitude = lon;
+    let latitude = lat, longitude = lon;
 
     if (city && !lat && !lon) {
-      const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${process.env.REACT_APP_WEATHER_API}`;
+      const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${process.env.WEATHER_API_KEY}`;
       const geoRes = await fetch(geoUrl);
       const geoData = await geoRes.json();
 
-      if (!geoData || geoData.length === 0) {
+      if (!geoData || geoData.length === 0)
         return res.status(404).json({ error: "City not found" });
-      }
 
       latitude = geoData[0].lat;
       longitude = geoData[0].lon;
     }
 
-    const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${latitude}&lon=${longitude}&appid=${process.env.REACT_APP_WEATHER_API}&units=metric`;
+    const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${latitude}&lon=${longitude}&appid=${process.env.WEATHER_API_KEY}&units=metric`;
     const response = await fetch(url);
     const data = await response.json();
 
     const trends = data.daily.map((day) => ({
-      date: new Date(day.dt * 1000).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      }),
+      date: new Date(day.dt * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
       rainfall: day.rain || 0,
       temp: day.temp.day,
     }));
 
     res.json({ trends });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Climate error:", err);
     res.status(500).json({ error: "Failed to fetch climate trends." });
   }
 });
@@ -196,7 +206,7 @@ app.post("/api/register", async (req, res) => {
 
     res.status(201).json({ success: true, message: "User registered successfully!" });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Register error:", err);
     res.status(500).json({ error: "Failed to register user." });
   }
 });
@@ -215,12 +225,12 @@ app.post("/api/login", async (req, res) => {
 
     res.json({ success: true, user: { name: user.name, email: user.email, role: user.role } });
   } catch (err) {
-    console.error(err);
+    console.error("❌ Login error:", err);
     res.status(500).json({ error: "Login failed." });
   }
 });
 
-// --- Invalid Route Handler ---
+// --- Fallback ---
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found." });
 });
