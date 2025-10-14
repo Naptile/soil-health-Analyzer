@@ -35,7 +35,7 @@ export default function Contact() {
 
     try {
       const res = await fetch(
-        "https://soil-health-analyzer-4-nd9o.onrender.com/api/contact",
+        "https://soil-health-analyzer-8-du5m.onrender.com/api/contact",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
