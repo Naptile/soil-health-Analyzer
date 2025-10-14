@@ -23,9 +23,9 @@ export default function Contact() {
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
-  const API_KEY = process.env.REACT_APP_WEATHER_API;
+  const API_KEY = process.env.REACT_APP_WEATHER_API; // Optional for map search
 
-  // Handle form submission
+  // Submit contact form
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -33,12 +33,14 @@ export default function Contact() {
     setSuccess("");
 
     try {
-      // ✅ Updated to your live backend
-      const res = await fetch("https://soil-health-analyzer-8-du5m.onrender.com/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, message, city }),
-      });
+      const res = await fetch(
+        "https://soil-health-analyzer-8-du5m.onrender.com/api/contact",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, message, city }),
+        }
+      );
 
       const data = await res.json();
 
@@ -58,7 +60,7 @@ export default function Contact() {
     }
   };
 
-  // Handle city search for map
+  // Search city for map
   const handleCitySearch = async (e) => {
     e.preventDefault();
     if (!query.trim()) return;
@@ -68,6 +70,7 @@ export default function Contact() {
         `https://api.openweathermap.org/geo/1.0/direct?q=${query}&limit=1&appid=${API_KEY}`
       );
       const geoData = await geoRes.json();
+
       if (!geoData || geoData.length === 0) {
         setError("City not found");
         return;
