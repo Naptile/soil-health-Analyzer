@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Leaf } from "lucide-react";
 
 export default function Dashboard({ user }) {
@@ -10,14 +10,48 @@ export default function Dashboard({ user }) {
     date: new Date().toLocaleDateString(),
   });
 
-  const handleUpload = (e) => {
+  // --- Fetch user's soil uploads from backend
+  useEffect(() => {
+    if (!user) return;
+    const fetchSoils = async () => {
+      try {
+        const res = await fetch(`https://soil-health-analyzer-8-du5m.onrender.com/api/soil?userId=${user._id}`);
+        const data = await res.json();
+        if (res.ok) setSoilUploads(data.soils || []);
+      } catch (err) {
+        console.error("Failed to fetch soil uploads:", err);
+      }
+    };
+    fetchSoils();
+  }, [user]);
+
+  // --- Handle new soil upload
+  const handleUpload = async (e) => {
     e.preventDefault();
     if (!newSoil.location || !newSoil.type) return;
 
-    // Assign a random score for demo purposes
-    const upload = { ...newSoil, score: Math.floor(Math.random() * 101) };
-    setSoilUploads([upload, ...soilUploads]);
-    setNewSoil({ location: "", type: "", score: 0, date: new Date().toLocaleDateString() });
+    const upload = {
+      ...newSoil,
+      score: Math.floor(Math.random() * 101), // Demo score
+      userId: user._id,
+    };
+
+    try {
+      const res = await fetch(`https://soil-health-analyzer-8-du5m.onrender.com/api/soil`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(upload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSoilUploads([data.soil, ...soilUploads]);
+        setNewSoil({ location: "", type: "", score: 0, date: new Date().toLocaleDateString() });
+      } else {
+        console.error(data.error || "Upload failed");
+      }
+    } catch (err) {
+      console.error("Upload failed:", err);
+    }
   };
 
   return (
