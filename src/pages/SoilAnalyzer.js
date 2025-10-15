@@ -1,42 +1,49 @@
 // src/pages/SoilAnalyzer.js
 import React, { useState } from "react";
-import { Leaf, Camera, Upload, Droplets, Wind, Sparkles, CheckCircle, AlertCircle, TrendingUp } from "lucide-react";
+import { Leaf, Camera, Upload, Droplets, Wind, Sparkles, CheckCircle, TrendingUp } from "lucide-react";
 
 export default function SoilAnalyzer() {
   const [image, setImage] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [results, setResults] = useState(null);
+  const [error, setError] = useState("");
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setImage(reader.result);
-        setAnalyzing(true);
-        setResults(null);
+    if (!file) return;
 
-        // Simulate AI analysis delay
-        setTimeout(() => {
-          setResults({
-            healthScore: 78,
-            moisture: 45,
-            ph: 6.5,
-            soilType: "Loamy",
-            degradationLevel: "Moderate",
-            nutrients: { nitrogen: 60, phosphorus: 50, potassium: 70 },
-            recommendations: [
-              "Add organic compost",
-              "Rotate crops regularly",
-              "Avoid excessive irrigation",
-            ],
-            suitableCrops: ["Maize", "Wheat", "Tomatoes"],
-          });
-          setAnalyzing(false);
-        }, 2000);
-      };
-      reader.readAsDataURL(file);
+    setAnalyzing(true);
+    setResults(null);
+    setError("");
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    try {
+      const res = await fetch("https://soil-health-analyzer-8-du5m.onrender.com/api/analyze-soil", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Soil analysis failed");
+        setImage(null);
+      } else {
+        setResults(data.results);
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Error connecting to server");
+      setImage(null);
+    } finally {
+      setAnalyzing(false);
     }
+
+    // Show preview of uploaded image
+    const reader = new FileReader();
+    reader.onload = () => setImage(reader.result);
+    reader.readAsDataURL(file);
   };
 
   const getHealthColor = (score) => {
@@ -53,6 +60,7 @@ export default function SoilAnalyzer() {
 
   return (
     <div>
+      {/* Header */}
       <div className="text-center mb-12 animate-fade-in">
         <div className="flex items-center justify-center gap-3 mb-4">
           <Leaf className="w-12 h-12 text-emerald-600 animate-bounce" />
@@ -63,15 +71,11 @@ export default function SoilAnalyzer() {
         <p className="text-gray-600 text-lg">AI-Powered Land Regeneration for a Greener Planet 🌱</p>
       </div>
 
+      {/* Upload */}
       {!image && (
         <div className="max-w-2xl mx-auto">
           <label className="group relative block cursor-pointer">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageUpload}
-              className="hidden"
-            />
+            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
             <div className="backdrop-blur-lg bg-white/70 border-3 border-dashed border-emerald-300 rounded-3xl p-16 text-center transition-all duration-300 hover:border-emerald-500 hover:bg-white/90 hover:shadow-2xl hover:scale-105">
               <Camera className="w-20 h-20 mx-auto mb-6 text-emerald-500 group-hover:scale-110 transition-transform" />
               <h3 className="text-2xl font-semibold text-gray-800 mb-3">Upload Soil Image</h3>
@@ -85,20 +89,25 @@ export default function SoilAnalyzer() {
         </div>
       )}
 
+      {/* Error */}
+      {error && (
+        <div className="max-w-2xl mx-auto mt-6 p-4 bg-red-100 text-red-700 rounded-xl border border-red-200 shadow-sm text-center">
+          {error}
+        </div>
+      )}
+
+      {/* Analysis */}
       {image && (
         <div className="space-y-6">
           <div className="backdrop-blur-lg bg-white/80 rounded-3xl p-6 shadow-xl">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="relative group">
-                <img 
-                  src={image} 
-                  alt="Soil sample" 
-                  className="w-full h-80 object-cover rounded-2xl shadow-lg"
-                />
+                <img src={image} alt="Soil sample" className="w-full h-80 object-cover rounded-2xl shadow-lg" />
                 <button
                   onClick={() => {
                     setImage(null);
                     setResults(null);
+                    setError("");
                   }}
                   className="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:bg-red-600 transition-all opacity-0 group-hover:opacity-100"
                 >
@@ -125,7 +134,7 @@ export default function SoilAnalyzer() {
                       {results.healthScore}
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                      <div 
+                      <div
                         className={`h-full ${getHealthBg(results.healthScore)} transition-all duration-1000 rounded-full`}
                         style={{ width: `${results.healthScore}%` }}
                       ></div>
@@ -163,27 +172,38 @@ export default function SoilAnalyzer() {
                   </div>
                   <div>
                     <div className="text-sm text-gray-600 mb-1">Degradation Level</div>
-                    <div className={`text-lg font-semibold ${
-                      results.degradationLevel === 'Low' ? 'text-green-600' :
-                      results.degradationLevel === 'Moderate' ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
+                    <div
+                      className={`text-lg font-semibold ${
+                        results.degradationLevel === "Low"
+                          ? "text-green-600"
+                          : results.degradationLevel === "Moderate"
+                          ? "text-yellow-600"
+                          : "text-red-600"
+                      }`}
+                    >
                       {results.degradationLevel}
                     </div>
                   </div>
                   <div>
                     <div className="text-sm text-gray-600 mb-2">Nutrients (NPK)</div>
                     <div className="space-y-2">
-                      {["nitrogen","phosphorus","potassium"].map((nutrient) => (
+                      {["nitrogen", "phosphorus", "potassium"].map((nutrient) => (
                         <div key={nutrient}>
                           <div className="flex justify-between text-xs mb-1">
-                            <span>{nutrient.charAt(0).toUpperCase()+nutrient.slice(1)}</span>
+                            <span>{nutrient.charAt(0).toUpperCase() + nutrient.slice(1)}</span>
                             <span>{results.nutrients[nutrient]}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className={`h-2 rounded-full ${
-                              nutrient==="nitrogen"?"bg-green-500":
-                              nutrient==="phosphorus"?"bg-blue-500":"bg-purple-500"
-                            }`} style={{ width: `${results.nutrients[nutrient]}%` }}></div>
+                            <div
+                              className={`h-2 rounded-full ${
+                                nutrient === "nitrogen"
+                                  ? "bg-green-500"
+                                  : nutrient === "phosphorus"
+                                  ? "bg-blue-500"
+                                  : "bg-purple-500"
+                              }`}
+                              style={{ width: `${results.nutrients[nutrient]}%` }}
+                            ></div>
                           </div>
                         </div>
                       ))}
@@ -210,8 +230,13 @@ export default function SoilAnalyzer() {
                   Suitable Crops
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {results.suitableCrops.map((crop, idx) => (
-                    <span key={idx} className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-medium">{crop}</span>
+                  {results.suitableCrops?.map((crop, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-medium"
+                    >
+                      {crop}
+                    </span>
                   ))}
                 </div>
               </div>
