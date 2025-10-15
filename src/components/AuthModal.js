@@ -8,21 +8,19 @@ export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  if (!isOpen) return null;
-
-  // ✅ Auto-detect backend (local vs Render)
-  const API_BASE =
-    process.env.NODE_ENV === "production"
-      ? "https://soil-health-analyzer-8-du5m.onrender.com"
-      : "http://localhost:5000";
-
-  // ✅ Restore logged-in user on reload
+  // --- Hooks always run at top level ---
   useEffect(() => {
     const savedUser = localStorage.getItem("user");
     if (savedUser) {
       onLogin(JSON.parse(savedUser));
     }
   }, [onLogin]);
+
+  // Auto-detect backend URL
+  const API_BASE =
+    process.env.NODE_ENV === "production"
+      ? "https://soil-health-analyzer-8-du5m.onrender.com"
+      : "http://localhost:5000";
 
   // --- Handle Login ---
   const handleLogin = async (e) => {
@@ -40,10 +38,9 @@ export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
       const data = await res.json();
 
       if (res.ok) {
-        // ✅ Save user in localStorage
         localStorage.setItem("user", JSON.stringify(data.user));
         onLogin(data.user);
-        onClose(); // close modal after login
+        onClose();
       } else {
         setError(data.error || "Login failed");
       }
@@ -87,11 +84,14 @@ export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
     }
   };
 
-  // --- Logout helper (optional if used in parent) ---
+  // --- Logout helper ---
   const handleLogout = () => {
     localStorage.removeItem("user");
     onLogin(null);
   };
+
+  // --- Conditional render after hooks ---
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/30 backdrop-blur-sm">
