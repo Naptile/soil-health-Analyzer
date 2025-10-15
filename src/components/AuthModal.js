@@ -10,6 +10,12 @@ export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
 
   if (!isOpen) return null;
 
+  // ✅ Automatically detect backend URL (local vs Render)
+  const API_BASE =
+    process.env.NODE_ENV === "production"
+      ? "https://soil-health-analyzer-8-du5m.onrender.com"
+      : "http://localhost:5000";
+
   // --- Handle Login ---
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -17,11 +23,12 @@ export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:5000/api/login", {
+      const res = await fetch(`${API_BASE}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
+
       const data = await res.json();
 
       if (res.ok) {
@@ -44,11 +51,12 @@ export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:5000/api/register", {
+      const res = await fetch(`${API_BASE}/api/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
       });
+
       const data = await res.json();
 
       if (res.ok) {
@@ -84,7 +92,10 @@ export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
 
         {error && <p className="text-red-500 mb-2 text-center">{error}</p>}
 
-        <form onSubmit={mode === "login" ? handleLogin : handleRegister} className="space-y-4">
+        <form
+          onSubmit={mode === "login" ? handleLogin : handleRegister}
+          className="space-y-4"
+        >
           {mode === "register" && (
             <input
               type="text"
@@ -117,7 +128,13 @@ export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
             disabled={loading}
             className="w-full bg-emerald-500 text-white px-5 py-3 rounded-xl font-medium hover:bg-emerald-600 transition-all"
           >
-            {loading ? (mode === "login" ? "Logging in..." : "Registering...") : mode === "login" ? "Login" : "Register"}
+            {loading
+              ? mode === "login"
+                ? "Logging in..."
+                : "Registering..."
+              : mode === "login"
+              ? "Login"
+              : "Register"}
           </button>
         </form>
 
@@ -125,14 +142,20 @@ export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
           {mode === "login" ? (
             <>
               Don't have an account?{" "}
-              <button onClick={() => setMode("register")} className="text-emerald-600 font-medium hover:underline">
+              <button
+                onClick={() => setMode("register")}
+                className="text-emerald-600 font-medium hover:underline"
+              >
                 Register
               </button>
             </>
           ) : (
             <>
               Already have an account?{" "}
-              <button onClick={() => setMode("login")} className="text-emerald-600 font-medium hover:underline">
+              <button
+                onClick={() => setMode("login")}
+                className="text-emerald-600 font-medium hover:underline"
+              >
                 Login
               </button>
             </>
