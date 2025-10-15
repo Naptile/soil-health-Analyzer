@@ -4,7 +4,6 @@ import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import nodemailer from "nodemailer"; // ✅ Added for sending emails
 
 dotenv.config();
 
@@ -65,7 +64,7 @@ app.get("/", (req, res) => {
   res.send("🌍 Soil Health Analyzer API is running...");
 });
 
-// --- Contact Route (Save + Send Email) ---
+// --- Contact Route (Save to MongoDB only) ---
 app.post("/api/contact", async (req, res) => {
   try {
     const { name, email, message, city } = req.body;
@@ -78,42 +77,14 @@ app.post("/api/contact", async (req, res) => {
     await newMessage.save();
     console.log("📩 New contact message saved:", newMessage);
 
-    // ✅ Send email using Gmail via Nodemailer
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
+    res.status(201).json({
+      success: true,
+      message: "Message saved successfully!",
+      data: newMessage,
     });
-
-    const mailOptions = {
-      from: `"Soil Health Analyzer" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_TO,
-      subject: `📬 New Contact Message from ${name}`,
-      html: `
-        <div style="font-family:Arial,sans-serif;line-height:1.6;">
-          <h2>New Message from Soil Health Analyzer</h2>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>City:</strong> ${city || "N/A"}</p>
-          <p><strong>Message:</strong></p>
-          <blockquote>${message}</blockquote>
-          <hr />
-          <p style="font-size:12px;color:#777;">Sent from Soil Health Analyzer Contact Form</p>
-        </div>
-      `,
-    };
-
-    await transporter.sendMail(mailOptions);
-    console.log("✅ Email sent to:", process.env.EMAIL_TO);
-
-    res
-      .status(201)
-      .json({ success: true, message: "Message sent and emailed successfully!" });
   } catch (err) {
     console.error("❌ Contact error:", err);
-    res.status(500).json({ error: "Failed to send message." });
+    res.status(500).json({ error: "Failed to save message." });
   }
 });
 
