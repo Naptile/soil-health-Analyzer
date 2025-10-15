@@ -59,6 +59,15 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model("User", userSchema);
 
+const soilSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  location: { type: String, required: true },
+  type: { type: String, required: true },
+  score: { type: Number, default: 0 },
+  date: { type: String, default: new Date().toLocaleDateString() },
+});
+const Soil = mongoose.model("Soil", soilSchema);
+
 // --- Default route ---
 app.get("/", (req, res) => {
   res.send("🌍 Soil Health Analyzer API is running...");
@@ -72,7 +81,6 @@ app.post("/api/contact", async (req, res) => {
       return res.status(400).json({ error: "All fields are required." });
     }
 
-    // ✅ Save to MongoDB
     const newMessage = new Contact({ name, email, message, city });
     await newMessage.save();
     console.log("📩 New contact message saved:", newMessage);
@@ -220,7 +228,7 @@ app.post("/api/register", async (req, res) => {
 
     res
       .status(201)
-      .json({ success: true, message: "User registered successfully!" });
+      .json({ success: true, message: "User registered successfully!", userId: newUser._id });
   } catch (err) {
     console.error("❌ Register error:", err);
     res.status(500).json({ error: "Failed to register user." });
@@ -244,11 +252,47 @@ app.post("/api/login", async (req, res) => {
 
     res.json({
       success: true,
-      user: { name: user.name, email: user.email, role: user.role },
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        stats: { soilScans: 0, weatherChecks: 0, resourcesRead: 0 },
+      },
     });
   } catch (err) {
     console.error("❌ Login error:", err);
     res.status(500).json({ error: "Login failed." });
+  }
+});
+
+// --- Soil Routes ---
+app.get("/api/soil", async (req, res) => {
+  try {
+    const { userId } = req.query;
+    if (!userId) return res.status(400).json({ error: "userId is required" });
+
+    const soils = await Soil.find({ userId }).sort({ date: -1 });
+    res.json({ soils });
+  } catch (err) {
+    console.error("❌ Fetch soil error:", err);
+    res.status(500).json({ error: "Failed to fetch soil data." });
+  }
+});
+
+app.post("/api/soil", async (req, res) => {
+  try {
+    const { userId, location, type, score, date } = req.body;
+    if (!userId || !location || !type)
+      return res.status(400).json({ error: "userId, location, and type are required." });
+
+    const newSoil = new Soil({ userId, location, type, score, date });
+    await newSoil.save();
+
+    res.status(201).json({ success: true, soil: newSoil });
+  } catch (err) {
+    console.error("❌ Upload soil error:", err);
+    res.status(500).json({ error: "Failed to upload soil data." });
   }
 });
 
