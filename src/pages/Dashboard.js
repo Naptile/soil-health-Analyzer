@@ -3,7 +3,7 @@ import { Leaf } from "lucide-react";
 
 export default function Dashboard({ user }) {
   const [soilUploads, setSoilUploads] = useState([]);
-  const [newSoil, setNewSoil] = useState({
+  const [newSoil, setNewSoil] = useState({ 
     location: "",
     type: "",
     score: 0,
