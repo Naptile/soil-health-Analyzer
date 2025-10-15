@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 
 export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
@@ -10,11 +10,19 @@ export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
 
   if (!isOpen) return null;
 
-  // ✅ Automatically detect backend URL (local vs Render)
+  // ✅ Auto-detect backend (local vs Render)
   const API_BASE =
     process.env.NODE_ENV === "production"
       ? "https://soil-health-analyzer-8-du5m.onrender.com"
       : "http://localhost:5000";
+
+  // ✅ Restore logged-in user on reload
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      onLogin(JSON.parse(savedUser));
+    }
+  }, [onLogin]);
 
   // --- Handle Login ---
   const handleLogin = async (e) => {
@@ -32,7 +40,10 @@ export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
       const data = await res.json();
 
       if (res.ok) {
+        // ✅ Save user in localStorage
+        localStorage.setItem("user", JSON.stringify(data.user));
         onLogin(data.user);
+        onClose(); // close modal after login
       } else {
         setError(data.error || "Login failed");
       }
@@ -74,6 +85,12 @@ export default function AuthModal({ isOpen, onClose, mode, setMode, onLogin }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  // --- Logout helper (optional if used in parent) ---
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    onLogin(null);
   };
 
   return (
