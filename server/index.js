@@ -4,6 +4,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
+import nodemailer from "nodemailer"; // ✅ Added for sending emails
 
 dotenv.config();
 
@@ -12,9 +13,9 @@ const PORT = process.env.PORT || 5000;
 
 // ✅ Explicit CORS Setup
 const allowedOrigins = [
-  "https://soil-health-analyzer-4-nd9o.onrender.com", 
-  "https://soil-health-analyzer-8-du5m.onrender.com",   
-  "http://localhost:3000"
+  "https://soil-health-analyzer-4-nd9o.onrender.com",
+  "https://soil-health-analyzer-8-du5m.onrender.com",
+  "http://localhost:3000",
 ];
 
 app.use(
@@ -64,7 +65,7 @@ app.get("/", (req, res) => {
   res.send("🌍 Soil Health Analyzer API is running...");
 });
 
-// --- Contact Routes ---
+// --- Contact Route (Save + Send Email) ---
 app.post("/api/contact", async (req, res) => {
   try {
     const { name, email, message, city } = req.body;
@@ -72,17 +73,51 @@ app.post("/api/contact", async (req, res) => {
       return res.status(400).json({ error: "All fields are required." });
     }
 
+    // ✅ Save to MongoDB
     const newMessage = new Contact({ name, email, message, city });
     await newMessage.save();
-
     console.log("📩 New contact message saved:", newMessage);
-    res.status(201).json({ success: true, message: "Message sent successfully!" });
+
+    // ✅ Send email using Gmail via Nodemailer
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: `"Soil Health Analyzer" <${process.env.EMAIL_USER}>`,
+      to: process.env.EMAIL_TO,
+      subject: `📬 New Contact Message from ${name}`,
+      html: `
+        <div style="font-family:Arial,sans-serif;line-height:1.6;">
+          <h2>New Message from Soil Health Analyzer</h2>
+          <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>City:</strong> ${city || "N/A"}</p>
+          <p><strong>Message:</strong></p>
+          <blockquote>${message}</blockquote>
+          <hr />
+          <p style="font-size:12px;color:#777;">Sent from Soil Health Analyzer Contact Form</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log("✅ Email sent to:", process.env.EMAIL_TO);
+
+    res
+      .status(201)
+      .json({ success: true, message: "Message sent and emailed successfully!" });
   } catch (err) {
     console.error("❌ Contact error:", err);
     res.status(500).json({ error: "Failed to send message." });
   }
 });
 
+// --- Get All Contact Messages ---
 app.get("/api/contact", async (req, res) => {
   try {
     const messages = await Contact.find().sort({ createdAt: -1 });
@@ -93,6 +128,7 @@ app.get("/api/contact", async (req, res) => {
   }
 });
 
+// --- Delete Message ---
 app.delete("/api/contact/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -104,6 +140,7 @@ app.delete("/api/contact/:id", async (req, res) => {
   }
 });
 
+// --- Mark Message as Read ---
 app.patch("/api/contact/:id/read", async (req, res) => {
   try {
     const { id } = req.params;
@@ -119,7 +156,8 @@ app.patch("/api/contact/:id/read", async (req, res) => {
 app.get("/api/weather", async (req, res) => {
   try {
     const { lat, lon, city } = req.query;
-    let latitude = lat, longitude = lon;
+    let latitude = lat,
+      longitude = lon;
 
     if (city && !lat && !lon) {
       const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${process.env.WEATHER_API_KEY}`;
@@ -134,7 +172,9 @@ app.get("/api/weather", async (req, res) => {
     }
 
     if (!latitude || !longitude)
-      return res.status(400).json({ error: "Missing lat/lon or city parameter." });
+      return res
+        .status(400)
+        .json({ error: "Missing lat/lon or city parameter." });
 
     const url = `https://api.openweathermap.org/data/2.5/onecall?lat=${latitude}&lon=${longitude}&appid=${process.env.WEATHER_API_KEY}&units=metric`;
     const response = await fetch(url);
@@ -157,7 +197,8 @@ app.get("/api/weather", async (req, res) => {
 app.get("/api/climate", async (req, res) => {
   try {
     const { lat, lon, city } = req.query;
-    let latitude = lat, longitude = lon;
+    let latitude = lat,
+      longitude = lon;
 
     if (city && !lat && !lon) {
       const geoUrl = `https://api.openweathermap.org/geo/1.0/direct?q=${city}&limit=1&appid=${process.env.WEATHER_API_KEY}`;
@@ -176,7 +217,10 @@ app.get("/api/climate", async (req, res) => {
     const data = await response.json();
 
     const trends = data.daily.map((day) => ({
-      date: new Date(day.dt * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      date: new Date(day.dt * 1000).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
       rainfall: day.rain || 0,
       temp: day.temp.day,
     }));
@@ -203,7 +247,9 @@ app.post("/api/register", async (req, res) => {
     const newUser = new User({ name, email, password: hashedPassword });
     await newUser.save();
 
-    res.status(201).json({ success: true, message: "User registered successfully!" });
+    res
+      .status(201)
+      .json({ success: true, message: "User registered successfully!" });
   } catch (err) {
     console.error("❌ Register error:", err);
     res.status(500).json({ error: "Failed to register user." });
@@ -214,15 +260,21 @@ app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password)
-      return res.status(400).json({ error: "Email and password are required." });
+      return res
+        .status(400)
+        .json({ error: "Email and password are required." });
 
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ error: "Invalid credentials." });
 
     const passwordMatch = await bcrypt.compare(password, user.password);
-    if (!passwordMatch) return res.status(401).json({ error: "Invalid credentials." });
+    if (!passwordMatch)
+      return res.status(401).json({ error: "Invalid credentials." });
 
-    res.json({ success: true, user: { name: user.name, email: user.email, role: user.role } });
+    res.json({
+      success: true,
+      user: { name: user.name, email: user.email, role: user.role },
+    });
   } catch (err) {
     console.error("❌ Login error:", err);
     res.status(500).json({ error: "Login failed." });
