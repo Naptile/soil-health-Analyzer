@@ -97,7 +97,7 @@ export default function Contact() {
             </p>
             <div className="flex flex-col gap-3 text-gray-100">
               <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5" /> +254 712 345 678
+                <Phone className="w-5 h-5" /> +254 718 439 373
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="w-5 h-5" /> naptilepeterson71@gmail.com
