@@ -71,7 +71,18 @@ export default function SoilAnalyzer() {
   };
 
   return (
-    <div>
+    <div className="relative">
+      {/* ===== LOADER OVERLAY ===== */}
+      {analyzing && (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-md z-50">
+          <div className="w-20 h-20 border-8 border-emerald-300 border-t-emerald-600 rounded-full animate-spin"></div>
+          <p className="mt-6 text-xl font-semibold text-gray-700">
+            Scanning Soil...
+          </p>
+          <p className="text-gray-500 mt-1">Please wait while AI analyzes</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="text-center mb-12 animate-fade-in">
         <div className="flex items-center justify-center gap-3 mb-4">
@@ -124,25 +135,12 @@ export default function SoilAnalyzer() {
         <div className="space-y-6">
           <div className="backdrop-blur-lg bg-white/80 rounded-3xl p-6 shadow-xl">
             <div className="grid md:grid-cols-2 gap-6">
-              {/* === Image Section with Loader Overlay === */}
               <div className="relative group">
                 <img
                   src={image}
                   alt="Soil sample"
                   className="w-full h-80 object-cover rounded-2xl shadow-lg"
                 />
-
-                {/* Loader overlay */}
-                {analyzing && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-md rounded-2xl z-10">
-                    <div className="w-14 h-14 border-8 border-emerald-300 border-t-emerald-600 rounded-full animate-spin"></div>
-                    <p className="mt-4 text-lg font-semibold text-gray-700">
-                      Scanning Soil...
-                    </p>
-                    <p className="text-gray-500 text-sm">AI is analyzing your soil</p>
-                  </div>
-                )}
-
                 <button
                   onClick={() => {
                     setImage(null);
@@ -155,7 +153,7 @@ export default function SoilAnalyzer() {
                 </button>
               </div>
 
-              {/* Right panel — Results */}
+              {/* Result Section */}
               {results && !analyzing && (
                 <div className="space-y-4">
                   <div className="text-center bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6">
