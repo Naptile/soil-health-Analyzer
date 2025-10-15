@@ -1,6 +1,15 @@
 // src/pages/SoilAnalyzer.js
 import React, { useState } from "react";
-import { Leaf, Camera, Upload, Droplets, Wind, Sparkles, CheckCircle, TrendingUp } from "lucide-react";
+import {
+  Leaf,
+  Camera,
+  Upload,
+  Droplets,
+  Wind,
+  Sparkles,
+  CheckCircle,
+  TrendingUp,
+} from "lucide-react";
 
 export default function SoilAnalyzer() {
   const [image, setImage] = useState(null);
@@ -20,10 +29,13 @@ export default function SoilAnalyzer() {
     formData.append("image", file);
 
     try {
-      const res = await fetch("https://soil-health-analyzer-8-du5m.onrender.com/api/analyze-soil", {
-        method: "POST",
-        body: formData,
-      });
+      const res = await fetch(
+        "https://soil-health-analyzer-8-du5m.onrender.com/api/analyze-soil",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
       const data = await res.json();
 
       if (!res.ok) {
@@ -59,7 +71,18 @@ export default function SoilAnalyzer() {
   };
 
   return (
-    <div>
+    <div className="relative">
+      {/* ===== LOADER OVERLAY ===== */}
+      {analyzing && (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-white/70 backdrop-blur-md z-50">
+          <div className="w-20 h-20 border-8 border-emerald-300 border-t-emerald-600 rounded-full animate-spin"></div>
+          <p className="mt-6 text-xl font-semibold text-gray-700">
+            Scanning Soil...
+          </p>
+          <p className="text-gray-500 mt-1">Please wait while AI analyzes</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="text-center mb-12 animate-fade-in">
         <div className="flex items-center justify-center gap-3 mb-4">
@@ -68,18 +91,29 @@ export default function SoilAnalyzer() {
             Soil Health Analyzer
           </h1>
         </div>
-        <p className="text-gray-600 text-lg">AI-Powered Land Regeneration for a Greener Planet 🌱</p>
+        <p className="text-gray-600 text-lg">
+          AI-Powered Land Regeneration for a Greener Planet 🌱
+        </p>
       </div>
 
       {/* Upload */}
       {!image && (
         <div className="max-w-2xl mx-auto">
           <label className="group relative block cursor-pointer">
-            <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+            />
             <div className="backdrop-blur-lg bg-white/70 border-3 border-dashed border-emerald-300 rounded-3xl p-16 text-center transition-all duration-300 hover:border-emerald-500 hover:bg-white/90 hover:shadow-2xl hover:scale-105">
               <Camera className="w-20 h-20 mx-auto mb-6 text-emerald-500 group-hover:scale-110 transition-transform" />
-              <h3 className="text-2xl font-semibold text-gray-800 mb-3">Upload Soil Image</h3>
-              <p className="text-gray-600 mb-4">Drop your soil photo here or click to browse</p>
+              <h3 className="text-2xl font-semibold text-gray-800 mb-3">
+                Upload Soil Image
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Drop your soil photo here or click to browse
+              </p>
               <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full font-medium group-hover:shadow-lg transition-all">
                 <Upload className="w-5 h-5" />
                 Choose File
@@ -102,7 +136,11 @@ export default function SoilAnalyzer() {
           <div className="backdrop-blur-lg bg-white/80 rounded-3xl p-6 shadow-xl">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="relative group">
-                <img src={image} alt="Soil sample" className="w-full h-80 object-cover rounded-2xl shadow-lg" />
+                <img
+                  src={image}
+                  alt="Soil sample"
+                  className="w-full h-80 object-cover rounded-2xl shadow-lg"
+                />
                 <button
                   onClick={() => {
                     setImage(null);
@@ -115,27 +153,25 @@ export default function SoilAnalyzer() {
                 </button>
               </div>
 
-              {analyzing && (
-                <div className="flex flex-col items-center justify-center">
-                  <div className="relative">
-                    <Sparkles className="w-20 h-20 text-emerald-500 animate-spin" />
-                    <div className="absolute inset-0 bg-emerald-500 blur-xl opacity-50 animate-pulse"></div>
-                  </div>
-                  <p className="mt-6 text-xl font-semibold text-gray-700">Analyzing Soil Health...</p>
-                  <p className="text-gray-500 mt-2">AI is processing your image</p>
-                </div>
-              )}
-
+              {/* Result Section */}
               {results && !analyzing && (
                 <div className="space-y-4">
                   <div className="text-center bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-6">
-                    <div className="text-sm font-medium text-gray-600 mb-2">Overall Health Score</div>
-                    <div className={`text-6xl font-bold ${getHealthColor(results.healthScore)} mb-2`}>
+                    <div className="text-sm font-medium text-gray-600 mb-2">
+                      Overall Health Score
+                    </div>
+                    <div
+                      className={`text-6xl font-bold ${getHealthColor(
+                        results.healthScore
+                      )} mb-2`}
+                    >
                       {results.healthScore}
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
                       <div
-                        className={`h-full ${getHealthBg(results.healthScore)} transition-all duration-1000 rounded-full`}
+                        className={`h-full ${getHealthBg(
+                          results.healthScore
+                        )} transition-all duration-1000 rounded-full`}
                         style={{ width: `${results.healthScore}%` }}
                       ></div>
                     </div>
@@ -145,12 +181,16 @@ export default function SoilAnalyzer() {
                     <div className="bg-blue-50 rounded-xl p-4 text-center">
                       <Droplets className="w-6 h-6 mx-auto mb-2 text-blue-600" />
                       <div className="text-sm text-gray-600">Moisture</div>
-                      <div className="text-xl font-bold text-blue-600">{results.moisture}%</div>
+                      <div className="text-xl font-bold text-blue-600">
+                        {results.moisture}%
+                      </div>
                     </div>
                     <div className="bg-amber-50 rounded-xl p-4 text-center">
                       <Wind className="w-6 h-6 mx-auto mb-2 text-amber-600" />
                       <div className="text-sm text-gray-600">pH Level</div>
-                      <div className="text-xl font-bold text-amber-600">{results.ph}</div>
+                      <div className="text-xl font-bold text-amber-600">
+                        {results.ph}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -158,8 +198,10 @@ export default function SoilAnalyzer() {
             </div>
           </div>
 
+          {/* Detailed Results */}
           {results && (
             <div className="grid md:grid-cols-3 gap-6 animate-fade-in">
+              {/* Soil Analysis */}
               <div className="backdrop-blur-lg bg-white/80 rounded-3xl p-6 shadow-xl">
                 <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                   <Leaf className="text-emerald-500" />
@@ -168,10 +210,14 @@ export default function SoilAnalyzer() {
                 <div className="space-y-4">
                   <div>
                     <div className="text-sm text-gray-600 mb-1">Soil Type</div>
-                    <div className="text-lg font-semibold text-emerald-600">{results.soilType}</div>
+                    <div className="text-lg font-semibold text-emerald-600">
+                      {results.soilType}
+                    </div>
                   </div>
                   <div>
-                    <div className="text-sm text-gray-600 mb-1">Degradation Level</div>
+                    <div className="text-sm text-gray-600 mb-1">
+                      Degradation Level
+                    </div>
                     <div
                       className={`text-lg font-semibold ${
                         results.degradationLevel === "Low"
@@ -185,33 +231,43 @@ export default function SoilAnalyzer() {
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm text-gray-600 mb-2">Nutrients (NPK)</div>
+                    <div className="text-sm text-gray-600 mb-2">
+                      Nutrients (NPK)
+                    </div>
                     <div className="space-y-2">
-                      {["nitrogen", "phosphorus", "potassium"].map((nutrient) => (
-                        <div key={nutrient}>
-                          <div className="flex justify-between text-xs mb-1">
-                            <span>{nutrient.charAt(0).toUpperCase() + nutrient.slice(1)}</span>
-                            <span>{results.nutrients[nutrient]}%</span>
+                      {["nitrogen", "phosphorus", "potassium"].map(
+                        (nutrient) => (
+                          <div key={nutrient}>
+                            <div className="flex justify-between text-xs mb-1">
+                              <span>
+                                {nutrient.charAt(0).toUpperCase() +
+                                  nutrient.slice(1)}
+                              </span>
+                              <span>{results.nutrients[nutrient]}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full ${
+                                  nutrient === "nitrogen"
+                                    ? "bg-green-500"
+                                    : nutrient === "phosphorus"
+                                    ? "bg-blue-500"
+                                    : "bg-purple-500"
+                                }`}
+                                style={{
+                                  width: `${results.nutrients[nutrient]}%`,
+                                }}
+                              ></div>
+                            </div>
                           </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div
-                              className={`h-2 rounded-full ${
-                                nutrient === "nitrogen"
-                                  ? "bg-green-500"
-                                  : nutrient === "phosphorus"
-                                  ? "bg-blue-500"
-                                  : "bg-purple-500"
-                              }`}
-                              style={{ width: `${results.nutrients[nutrient]}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      ))}
+                        )
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* Recommendations */}
               <div className="backdrop-blur-lg bg-white/80 rounded-3xl p-6 shadow-xl">
                 <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                   <CheckCircle className="text-green-500" />
@@ -224,6 +280,7 @@ export default function SoilAnalyzer() {
                 </ul>
               </div>
 
+              {/* Suitable Crops */}
               <div className="backdrop-blur-lg bg-white/80 rounded-3xl p-6 shadow-xl">
                 <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
                   <TrendingUp className="text-teal-500" />
