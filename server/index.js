@@ -12,7 +12,7 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ✅ Explicit CORS Setup
+// Explicit CORS Setup
 const allowedOrigins = [
   "https://soil-health-analyzer-4-nd9o.onrender.com",
   "https://soil-health-analyzer-8-du5m.onrender.com",
@@ -25,7 +25,7 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        console.log("❌ Blocked by CORS:", origin);
+        console.log(" Blocked by CORS:", origin);
         callback(new Error("Not allowed by CORS"));
       }
     },
@@ -38,8 +38,8 @@ app.use(express.json());
 // --- MongoDB Connection ---
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ Connected to MongoDB"))
-  .catch((err) => console.error("❌ MongoDB connection failed:", err));
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error(" MongoDB connection failed:", err));
 
 // --- Schemas ---
 const contactSchema = new mongoose.Schema({
@@ -185,7 +185,7 @@ app.get("/api/climate", async (req, res) => {
 
     res.json({ trends });
   } catch (err) {
-    console.error("❌ Climate error:", err);
+    console.error(" Climate error:", err);
     res.status(500).json({ error: "Failed to fetch climate trends." });
   }
 });
@@ -205,7 +205,7 @@ app.post("/api/register", async (req, res) => {
 
     res.status(201).json({ success: true, message: "User registered successfully!", userId: newUser._id });
   } catch (err) {
-    console.error("❌ Register error:", err);
+    console.error(" Register error:", err);
     res.status(500).json({ error: "Failed to register user." });
   }
 });
@@ -232,7 +232,7 @@ app.post("/api/login", async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("❌ Login error:", err);
+    console.error(" Login error:", err);
     res.status(500).json({ error: "Login failed." });
   }
 });
@@ -246,7 +246,7 @@ app.get("/api/soil", async (req, res) => {
     const soils = await Soil.find({ userId }).sort({ date: -1 });
     res.json({ soils });
   } catch (err) {
-    console.error("❌ Fetch soil error:", err);
+    console.error(" Fetch soil error:", err);
     res.status(500).json({ error: "Failed to fetch soil data." });
   }
 });
@@ -261,7 +261,7 @@ app.post("/api/soil", async (req, res) => {
 
     res.status(201).json({ success: true, soil: newSoil });
   } catch (err) {
-    console.error("❌ Upload soil error:", err);
+    console.error(" Upload soil error:", err);
     res.status(500).json({ error: "Failed to upload soil data." });
   }
 });
@@ -273,7 +273,7 @@ app.post("/api/analyze-soil", upload.single("image"), async (req, res) => {
 
     const imageBuffer = req.file.buffer;
 
-    // ✅ Simulate soil verification (replace with real AI model later)
+    //  Simulate soil verification (replace with real AI model later)
     const crypto = await import("crypto");
     const hash = crypto.createHash("md5").update(imageBuffer).digest("hex");
 
