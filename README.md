@@ -76,7 +76,15 @@ Deploy easily on Render
 
 ## Screen shots
 
-.
+![view](images/Screenshot%20from%202025-11-16%2008-54-12.png)
+
+![view](images/Screenshot%20from%202025-11-16%2008-54-39.png)
+
+
+![view](images/Screenshot%20from%202025-11-16%2009-42-12.png)
+
+![soil sample](images/soil-sample.jpeg)
+
 
 🧭 Usage Guide
 
