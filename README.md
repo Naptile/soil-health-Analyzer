@@ -70,6 +70,9 @@ The optimized production build will be available in the /build folder.
 Deploy easily on Render
 , Vercel
 , or Netlify
+
+## Screen shots
+
 .
 
 🧭 Usage Guide
