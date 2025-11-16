@@ -1,6 +1,7 @@
 🌱 Soil Health Analyzer
 
-![view](images/Screenshot from 2025-11-16 08-53-51.png)
+![view](images/Screenshot%20from%202025-11-16%2008-53-51.png)
+
 
 Live Demo: https://soil-health-analyzer-4-nd9o.onrender.com
 
